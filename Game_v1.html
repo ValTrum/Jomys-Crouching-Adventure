@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jomy's Crouching Adventure - v1.1.1</title>
+    <style>
+        body { 
+            margin: 0; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            min-height: 100vh; 
+            background: linear-gradient(to bottom, #1a1a2e, #16213e); 
+            color: white; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            padding-top: 10px; 
+            overflow: hidden; 
+        }
+        canvas { 
+            border: 3px solid #444; 
+            border-radius: 10px;
+            background: linear-gradient(to bottom, #87CEEB, #1E90FF); 
+            display: block; 
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+            transition: filter 0.3s; 
+        }
+        .paused-canvas {
+            filter: blur(3px) grayscale(30%);
+        }
+        #gameInfoBar { 
+            width: 100%; 
+            background: linear-gradient(to bottom, rgba(25, 25, 35, 0.95), rgba(40, 40, 50, 0.95));
+            z-index: 10; 
+            padding: 10px 0; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            border-bottom: 2px solid #555; 
+            margin-bottom: 15px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        }
+        h2 {
+            margin: 0 0 10px 0;
+            font-size: 24px;
+            color: #FFD700; 
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        #gameInfo { 
+            font-size: 18px; 
+            min-width: 480px; 
+            display: flex; 
+            justify-content: space-around; 
+            flex-wrap: wrap; 
+        }
+        #healthBarContainer { 
+            width: 200px; 
+            height: 20px; 
+            background-color: #333; 
+            border: 2px solid white; 
+            border-radius: 10px;
+            margin-bottom: 8px; 
+            overflow: hidden; 
+        }
+        #healthBar { 
+            width: 100%; 
+            height: 100%; 
+            background: linear-gradient(to right, #ff0000, #ff6b6b); 
+            transition: width 0.3s ease-out; 
+            border-radius: 8px; 
+        }
+        #controls { 
+            margin-top: 15px; 
+            font-size: 15px; 
+            text-align: center; 
+            background-color: rgba(0,0,0,0.3);
+            padding: 8px 15px;
+            border-radius: 5px;
+        }
+        .game-stat {
+            display: inline-flex;
+            align-items: center;
+            margin: 0 10px; 
+        }
+        .stat-icon {
+            margin-right: 5px;
+            font-size: 20px; 
+        }
+        .menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            display: flex; 
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0; 
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .menu-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .menu-content {
+            background: linear-gradient(to bottom, #2a2a4a, #1a1a3a);
+            padding: 30px 40px; 
+            border-radius: 10px;
+            text-align: center;
+            max-width: 500px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.5);
+            color: #e0e0e0; 
+        }
+        .menu-title {
+            font-size: 32px;
+            margin-bottom: 20px;
+            color: #FFD700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        .menu-content p {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+        .btn {
+            background: linear-gradient(to bottom, #4a5568, #2d3748);
+            color: white; border: none; padding: 12px 25px; margin: 10px;
+            border-radius: 5px; font-size: 18px; cursor: pointer;
+            transition: all 0.2s ease-in-out; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .btn:hover {
+            background: linear-gradient(to bottom, #5a6578, #3d4758); 
+            transform: translateY(-2px) scale(1.02); 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        .btn-primary { 
+            background: linear-gradient(to bottom, #4299e1, #3182ce);
+        }
+        .btn-primary:hover {
+            background: linear-gradient(to bottom, #3182ce, #2b6cb0);
+        }
+        @keyframes pulse { 
+            0% { transform: scale(1); box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+            50% { transform: scale(1.05); box-shadow: 0 4px 10px rgba(66,153,225,0.5); }
+            100% { transform: scale(1); box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        }
+        .pulse {
+            animation: pulse 1.5s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameInfoBar">
+        <h2>Jomy's Crouching Adventure!</h2>
+        <div id="healthBarContainer">
+            <div id="healthBar"></div>
+        </div>
+        <div id="gameInfo">
+            <div class="game-stat">
+                <span class="stat-icon">🚩</span>
+                <span>Level: <span id="levelCount">1</span> / 10</span>
+            </div>
+            <div class="game-stat" id="eggStatDisplay">
+                <span class="stat-icon">🥚</span>
+                <span>Eggs: <span id="eggCount">0</span> / <span id="totalEggCount">0</span></span>
+            </div>
+            <div class="game-stat">
+                <span class="stat-icon">🏆</span>
+                <span>Score: <span id="scoreCount">0</span></span>
+            </div>
+            <div class="game-stat">
+                <span class="stat-icon">⏱️</span>
+                <span>Time: <span id="timeCount">40</span>s</span>
+            </div>
+        </div>
+    </div>
+    <canvas id="gameCanvas" width="1000" height="400"></canvas> 
+    <div id="controls">
+        <span>W/Up: Jump | A/Left: Left | D/Right: Right | S/Down: Crouch | Shift: Dash | P: Pause | R: Restart Level | Jump on Bosses to attack!</span>
+    </div>
+
+    <div id="startMenu" class="menu-overlay active"> 
+        <div class="menu-content">
+            <div class="menu-title">Jomy's Crouching Adventure</div>
+            <p>Help Jomy collect all golden eggs and defeat the bosses! Jump on their heads to damage them. Levels 1-9 have 1 boss. Level 10 has 2 bosses and a 30s timer!</p>
+            <button id="startButton" class="btn btn-primary pulse">Start Game</button>
+        </div>
+    </div>
+    
+    <div id="pauseMenu" class="menu-overlay"> 
+        <div class="menu-content">
+            <div class="menu-title">Game Paused</div>
+            <button id="resumeButton" class="btn btn-primary">Resume Game</button>
+            <button id="restartButtonFromPause" class="btn">Restart Game</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        const viewportWidth = canvas.width;
+        const viewportHeight = canvas.height;
+        let worldWidth = 3200;
+        const worldHeight = viewportHeight;
+
+        const camera = { x: 0, y: 0, width: viewportWidth, height: viewportHeight };
+
+        let eggsCollected = 0, score = 0, scoreAtStartOfLevel = 0, totalEggsInLevel = 0;
+        let currentLevel = 1;
+        const MAX_LEVELS = 10;
+        let gameActive = false; 
+        let gamePaused = false;
+        let gameWon = false;
+        let showStartMenu = true; 
+        
+        const GAME_DURATION_SECONDS = 40;
+        let baseTimeForLevel = GAME_DURATION_SECONDS;
+        let timeLeft = GAME_DURATION_SECONDS, gameStartTime, timePausedStartTotal = 0, lastPauseTime;
+        const BONUS_POINTS_PER_SECOND = 10;
+
+        const EGG_HEIGHT = 80;
+        const PLAYER_NORMAL_HEIGHT = 50;
+        const PLAYER_CROUCH_HEIGHT = PLAYER_NORMAL_HEIGHT / 2;
+        
+        const images = {};
+        const imagesToLoad = [
+            { name: 'player_stand_right', src: 'https://via.placeholder.com/30x50/007bff/ffffff.png?text=JomyR' }, 
+            { name: 'player_stand_left', src: 'https://via.placeholder.com/30x50/007bff/ffffff.png?text=JomyL' }, 
+            { name: 'player_crouch_right', src: 'https://via.placeholder.com/30x25/007bff/ffffff.png?text=JomyCR' },
+            { name: 'player_crouch_left', src: 'https://via.placeholder.com/30x25/007bff/ffffff.png?text=JomyCL' }, 
+            { name: 'egg', src: 'https://via.placeholder.com/18x22/ffd700/000000.png?text=E' },         
+            { name: 'cloud1', src: 'https://via.placeholder.com/100x50/FFFFFF/FFFFFF.png?text=.' },    
+            { name: 'cloud2', src: 'https://via.placeholder.com/70x35/F0F0F0/F0F0F0.png?text=.' },    
+            { name: 'plant1', src: 'https://via.placeholder.com/25x30/228B22/228B22.png?text=.' },     
+            { name: 'plant2', src: 'https://via.placeholder.com/35x50/3CB371/3CB371.png?text=.' }      
+        ];
+
+        let imagesLoadedCount = 0;
+        const totalImagesToLoad = imagesToLoad.length;
+
+        function executeAfterImagesLoad(callback) { 
+            if (totalImagesToLoad === 0) { callback(); return; }
+            imagesToLoad.forEach(imgData => {
+                images[imgData.name] = new Image();
+                images[imgData.name].onload = () => {
+                    imagesLoadedCount++;
+                    if (imagesLoadedCount === totalImagesToLoad) callback(); 
+                };
+                images[imgData.name].onerror = () => {
+                    imagesLoadedCount++; 
+                    if (imagesLoadedCount === totalImagesToLoad) callback();
+                }
+                images[imgData.name].src = imgData.src;
+            });
+        }
+        
+        const player = {
+            x: 50, y: worldHeight - 70, width: 30, height: PLAYER_NORMAL_HEIGHT, 
+            normalHeight: PLAYER_NORMAL_HEIGHT, crouchHeight: PLAYER_CROUCH_HEIGHT,
+            speed: 4, dx: 0, dy: 0, gravity: 0.45, jumpPower: -12,  
+            isJumping: false, onGround: true, isCrouching: false, maxHealth: 100, currentHealth: 100,
+            facing: 'right', invincible: false, invincibleTimer: 0, invincibleDuration: 90, 
+            isDashing: false, dashSpeed: 10, dashDuration: 12, dashTimer: 0,
+            dashCooldown: 90, dashCooldownTimer: 0
+        };
+
+        const clouds = []; const CLOUD_COUNT = 15;
+        function initClouds() { 
+            clouds.length = 0;
+            for (let i = 0; i < CLOUD_COUNT; i++) {
+                clouds.push({
+                    x: Math.random() * worldWidth * 1.2 - worldWidth * 0.1, 
+                    y: Math.random() * (viewportHeight * 0.4), 
+                    speed: Math.random() * 0.3 + 0.05, 
+                    type: Math.random() > 0.5 ? 'cloud1' : 'cloud2',
+                    scale: Math.random() * 0.4 + 0.6, 
+                    opacity: Math.random() * 0.3 + 0.5
+                });
+            }
+        }
+
+        const platforms = [];
+        function initPlatforms(level) {
+            platforms.length = 0;
+            if (level < MAX_LEVELS) {
+                platforms.push(
+                    { x: 0, y: worldHeight - 20, width: 3200, height: 20, color: '#228B22', type: 'ground' },
+                    { x: 150, y: worldHeight - 100, width: 120, height: 20, color: '#654321', type: 'normal' },
+                    { x: 300, y: worldHeight - 160, width: 150, height: 20, color: '#654321', type: 'normal' },
+                    { x: 450, y: worldHeight - 70, width: 150, height: 20, color: '#502A0E', type: 'crouch' }, 
+                    { x: 650, y: worldHeight - 220, width: 180, height: 20, color: '#654321', type: 'normal' },
+                    { x: 50, y: worldHeight - 250, width: 130, height: 20, color: '#654321', type: 'normal' },
+                    { x: 850, y: worldHeight - 70, width: 100, height: 20, color: '#4CAF50', type: 'bounce' }, 
+                    { x: 1000, y: worldHeight - 130, width: 150, height: 20, color: '#654321', type: 'normal' },
+                    { x: 1200, y: worldHeight - 80, width: 100, height: 20, color: '#502A0E', type: 'crouch' }, 
+                    { x: 1400, y: worldHeight - 100, width: 180, height: 20, color: '#654321', type: 'normal' },
+                    { x: 1650, y: worldHeight - 180, width: 120, height: 20, color: '#654321', type: 'normal' },
+                    { x: 1800, y: worldHeight - 80, width: 200, height: 20, color: '#4CAF50', type: 'bounce' },
+                    { x: 2000, y: worldHeight - 240, width: 150, height: 20, color: '#654321', type: 'normal' }, 
+                    { x: 2200, y: worldHeight - 140, width: 100, height: 20, color: '#4CAF50', type: 'bounce' },
+                    { x: 2450, y: worldHeight - 110, width: 150, height: 20, color: '#654321', type: 'normal' },
+                    { x: 2650, y: worldHeight - 200, width: 120, height: 20, color: '#654321', type: 'normal' },
+                    { x: 2800, y: worldHeight - 70, width: 100, height: 20, color: '#654321', type: 'normal' },
+                    { x: 3000, y: worldHeight - 150, width: 150, height: 20, color: '#654321', type: 'normal' }
+                );
+            } else {
+                platforms.push(
+                    { x: 0, y: worldHeight - 20, width: viewportWidth, height: 20, color: '#8B0000', type: 'ground' }, 
+                    { x: 150, y: worldHeight - 120, width: 200, height: 20, color: '#444', type: 'normal' },
+                    { x: 650, y: worldHeight - 120, width: 200, height: 20, color: '#444', type: 'normal' },
+                    { x: 400, y: worldHeight - 220, width: 200, height: 20, color: '#444', type: 'normal' }
+                );
+            }
+        }
+
+        const decorations = []; const DECORATION_COUNT = 35;
+        function initDecorations(level) { 
+            decorations.length = 0;
+            if (level === MAX_LEVELS) return; 
+            for (let i = 0; i < DECORATION_COUNT; i++) {
+                const type = Math.random() > 0.5 ? 'plant1' : 'plant2';
+                const imgHeight = (type === 'plant1' ? (images.plant1?.height || 30) : (images.plant2?.height || 50));
+                let onPlatform = Math.random() > 0.3; 
+                let yPos, xPos = Math.random() * worldWidth;
+                let chosenPlatform = null;
+
+                if (onPlatform) {
+                    const suitablePlatforms = platforms.filter(p => (p.type === 'normal' || p.type === 'ground') && p.width > 40);
+                    if (suitablePlatforms.length > 0) {
+                        chosenPlatform = suitablePlatforms[Math.floor(Math.random() * suitablePlatforms.length)];
+                        yPos = chosenPlatform.y - imgHeight;
+                        const imgWidth = (type === 'plant1' ? (images.plant1?.width || 25) : (images.plant2?.width || 35));
+                        xPos = chosenPlatform.x + Math.random() * Math.max(0, (chosenPlatform.width - imgWidth));
+                    } else { onPlatform = false; } 
+                }
+                if (!onPlatform || !chosenPlatform) {
+                    yPos = (worldHeight - 20) - imgHeight;
+                }
+                decorations.push({ x: xPos, y: yPos, type: type });
+            }
+        }
+        
+        const particles = []; 
+        function createParticles(x, y, count, type) { 
+             for (let i = 0; i < count; i++) {
+                let p = {
+                    x: x, y: y,
+                    vx: (Math.random() - 0.5) * 4, 
+                    vy: (Math.random() * -3 - 1),
+                    size: Math.random() * 3 + 1, 
+                    color: '#FFFFFF',
+                    life: Math.random() * 40 + 20, 
+                    maxLife: Math.random() * 40 + 20,
+                    gravity: 0.1,
+                    type: type
+                };
+                if (type === 'jump') {
+                    p.color = '#DDDDDD'; p.vy = Math.random() * -2 - 0.5; p.size = Math.random() * 2 + 1;
+                } else if (type === 'land') {
+                    p.color = '#B0B0B0'; p.vx = (Math.random() - 0.5) * 3; p.vy = Math.random() * -1.5; p.size = Math.random() * 2.5 + 1;
+                } else if (type === 'egg') {
+                    p.color = '#FFD700'; p.vy = Math.random() * -5 - 2; p.size = Math.random() * 3 + 2; p.gravity = 0.15;
+                } else if (type === 'bossHit') {
+                    p.color = '#FF0000'; p.vx = (Math.random() - 0.5) * 6; p.vy = Math.random() * -4 - 2; p.size = Math.random() * 4 + 2;
+                } else if (type === 'dash') {
+                    p.color = '#87CEEB'; 
+                    p.vx = (player.facing === 'right' ? -1 : 1) * (Math.random() * 2 + 1); 
+                    p.vy = (Math.random() - 0.5) * 2; 
+                    p.life = Math.random() * 15 + 10; p.maxLife = p.life;
+                    p.gravity = 0.05;
+                } else if (type === 'firework_spark') { 
+                    const hue = Math.random() * 360;
+                    p.color = `hsl(${hue}, 100%, 70%)`;
+                    p.vx = (Math.random() - 0.5) * (Math.random() * 6 + 2); 
+                    p.vy = (Math.random() - 0.5) * (Math.random() * 6 + 2) - Math.random();
+                    p.size = Math.random() * 2.5 + 1;
+                    p.life = Math.random() * 60 + 40; p.maxLife = p.life;
+                    p.gravity = 0.08;
+                }
+                particles.push(p);
+            }
+        }
+        function updateParticles() { 
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx; p.y += p.vy; p.vy += p.gravity; p.life--;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+        }
+        function drawParticles() { 
+             particles.forEach(p => {
+                if (p.type === 'firework_spark') { 
+                     const alpha = p.life / p.maxLife;
+                    ctx.fillStyle = p.color; ctx.globalAlpha = Math.max(0, alpha); 
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); 
+                    ctx.fill();
+                } else { 
+                    const alpha = p.life / p.maxLife;
+                    ctx.fillStyle = p.color; ctx.globalAlpha = Math.max(0, alpha); 
+                    ctx.beginPath();
+                    ctx.arc(p.x - camera.x, p.y - camera.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+            ctx.globalAlpha = 1; 
+        }
+        
+        const gigentEggs = [];
+        const eggPositions = [ 
+            { x: 80,   y: (worldHeight - 20) - EGG_HEIGHT },  
+            { x: 180,  y: (worldHeight - 100) - EGG_HEIGHT }, 
+            { x: 360,  y: (worldHeight - 160) - EGG_HEIGHT }, 
+            { x: 520,  y: (worldHeight - 20) - EGG_HEIGHT }, 
+            { x: 70,   y: (worldHeight - 250) - EGG_HEIGHT },  
+            { x: 880,  y: (worldHeight - 70) - EGG_HEIGHT },   
+            { x: 1050, y: (worldHeight - 130) - EGG_HEIGHT }, 
+            { x: 1250, y: (worldHeight - 20) - EGG_HEIGHT }, 
+            { x: 1450, y: (worldHeight - 100) - EGG_HEIGHT }, 
+            { x: 950,  y: (worldHeight - 20) - EGG_HEIGHT },   
+            { x: 1680, y: (worldHeight - 180) - EGG_HEIGHT }, 
+            { x: 1850, y: (worldHeight - 80) - EGG_HEIGHT },  
+            { x: 2050, y: (worldHeight - 240) - EGG_HEIGHT }, 
+            { x: 2230, y: (worldHeight - 140) - EGG_HEIGHT }, 
+            { x: 1900, y: (worldHeight - 20) - EGG_HEIGHT },  
+            { x: 2500, y: (worldHeight - 110) - EGG_HEIGHT }, 
+            { x: 2700, y: (worldHeight - 200) - EGG_HEIGHT }, 
+            { x: 2830, y: (worldHeight - 70) - EGG_HEIGHT },  
+            { x: 3050, y: (worldHeight - 150) - EGG_HEIGHT }, 
+            { x: 3100, y: (worldHeight - 20) - EGG_HEIGHT }   
+        ];
+        
+        function initEggs(level) { 
+            gigentEggs.length = 0;
+            if (level === MAX_LEVELS) {
+                totalEggsInLevel = 0; 
+                document.getElementById('eggStatDisplay').style.display = 'none';
+                return;
+            }
+            document.getElementById('eggStatDisplay').style.display = 'inline-flex';
+            totalEggsInLevel = eggPositions.length;
+            const bobSpeed = 0.05; 
+            const bobAmount = 2; 
+            const glowSpeed = 0.04;
+            const maxGlow = 4;
+
+            eggPositions.forEach(pos => {
+                gigentEggs.push({
+                    x: pos.x, y: pos.y, width: 18, height: EGG_HEIGHT,
+                    color: 'gold', collected: false,
+                    baseY: pos.y, bobOffset: Math.random() * Math.PI * 2, 
+                    bobSpeed: bobSpeed, bobAmount: bobAmount,
+                    glowSize: Math.random() * maxGlow, 
+                    glowDirection: Math.random() > 0.5 ? 1: -1,
+                    glowSpeed: glowSpeed, maxGlow: maxGlow
+                });
+            });
+            document.getElementById('totalEggCount').textContent = totalEggsInLevel;
+        }
+        function updateEggsVisuals() { 
+            gigentEggs.forEach(egg => {
+                if (!egg.collected) {
+                    egg.bobOffset += egg.bobSpeed;
+                    egg.y = egg.baseY + Math.sin(egg.bobOffset) * egg.bobAmount;
+
+                    egg.glowSize += egg.glowDirection * egg.glowSpeed; 
+                    if (egg.glowSize >= egg.maxGlow || egg.glowSize <= 0) {
+                        egg.glowDirection *= -1;
+                        egg.glowSize = Math.max(0, Math.min(egg.maxGlow, egg.glowSize)); 
+                    }
+                }
+            });
+        }
+
+        const bosses = [];
+        function initBosses(level) {
+            bosses.length = 0;
+            if (level < MAX_LEVELS) {
+                bosses.push({
+                    x: 2900, y: worldHeight - 60, width: 40, height: 40, 
+                    hp: 2 + Math.floor(level/3), 
+                    maxHp: 2 + Math.floor(level/3),
+                    dx: 2, color: '#800080' 
+                });
+            } else {
+                bosses.push({
+                    x: 200, y: worldHeight - 80, width: 60, height: 60, 
+                    hp: 5, maxHp: 5, dx: 3, color: '#FF4500' 
+                });
+                bosses.push({
+                    x: 740, y: worldHeight - 80, width: 60, height: 60, 
+                    hp: 5, maxHp: 5, dx: -3, color: '#FF4500' 
+                });
+            }
+        }
+
+        const keys = { 
+            w: false, a: false, s: false, d: false, p: false, r: false, Shift: false,
+            ArrowUp: false, ArrowLeft: false, ArrowDown: false, ArrowRight: false
+        };
+        
+        window.addEventListener('keydown', function(e) {
+            if (e.key === 'Shift') keys.Shift = true;
+            if (e.key === 'w' || e.key === 'W') keys.w = true;
+            if (e.key === 'a' || e.key === 'A') keys.a = true;
+            if (e.key === 's' || e.key === 'S') keys.s = true;
+            if (e.key === 'd' || e.key === 'D') keys.d = true;
+            if (e.key === 'p' || e.key === 'P') { 
+                if (!keys.p && !showStartMenu) togglePause();
+                keys.p = true; 
+            }
+            if (e.key === 'r' || e.key === 'R') {
+                if (!gameActive && !gameWon && !showStartMenu) {
+                    score = scoreAtStartOfLevel; // Revert score to start of level
+                    loadLevel(currentLevel);     // Reload current level
+                }
+                keys.r = true;
+            }
+            if (e.key === 'ArrowUp') keys.ArrowUp = true;
+            if (e.key === 'ArrowLeft') keys.ArrowLeft = true;
+            if (e.key === 'ArrowDown') keys.ArrowDown = true;
+            if (e.key === 'ArrowRight') keys.ArrowRight = true;
+        });
+        window.addEventListener('keyup', function(e) {
+            if (e.key === 'Shift') keys.Shift = false;
+            if (e.key === 'w' || e.key === 'W') keys.w = false;
+            if (e.key === 'a' || e.key === 'A') keys.a = false;
+            if (e.key === 's' || e.key === 'S') keys.s = false;
+            if (e.key === 'd' || e.key === 'D') keys.d = false;
+            if (e.key === 'p' || e.key === 'P') keys.p = false; 
+            if (e.key === 'r' || e.key === 'R') keys.r = false;
+            if (e.key === 'ArrowUp') keys.ArrowUp = false;
+            if (e.key === 'ArrowLeft') keys.ArrowLeft = false;
+            if (e.key === 'ArrowDown') keys.ArrowDown = false;
+            if (e.key === 'ArrowRight') keys.ArrowRight = false;
+        });
+
+        document.getElementById('startButton').addEventListener('click', () => {
+            document.getElementById('startMenu').classList.remove('active');
+            showStartMenu = false;
+            score = 0; 
+            scoreAtStartOfLevel = 0;
+            loadLevel(1); 
+        });
+        document.getElementById('resumeButton').addEventListener('click', togglePause);
+        document.getElementById('restartButtonFromPause').addEventListener('click', () => {
+            document.getElementById('pauseMenu').classList.remove('active');
+            canvas.classList.remove('paused-canvas');
+            gamePaused = false; 
+            score = 0;
+            scoreAtStartOfLevel = 0;
+            loadLevel(1);   
+        });
+        
+        function togglePause() {
+            if (showStartMenu) return; 
+
+            gamePaused = !gamePaused;
+            document.getElementById('pauseMenu').classList.toggle('active', gamePaused);
+            canvas.classList.toggle('paused-canvas', gamePaused);
+
+            if (gamePaused) {
+                lastPauseTime = performance.now(); 
+                playSound('pause'); 
+            } else { 
+                if (gameActive && lastPauseTime) { 
+                    timePausedStartTotal += (performance.now() - lastPauseTime);
+                    lastPauseTime = 0; 
+                }
+                playSound('resume'); 
+            }
+        }
+
+        function playSound(soundName) { 
+             try {
+                const audio = new Audio('sounds/' + soundName + '.mp3');
+                const playPromise = audio.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(error => {
+                        if (error.name !== 'NotAllowedError' && error.name !== 'AbortError') {
+                             console.error(`Error playing sound:`, error);
+                        }
+                    });
+                }
+            } catch (e) {}
+        }
+        
+        let showFireworksAnimation = false; 
+        let fireworksInterval;
+
+        function createFireworkExplosion(x, y) { 
+            createParticles(x, y, 60 + Math.random() * 40, 'firework_spark'); 
+        }
+
+        function updateUIonScreen() { 
+            document.getElementById('levelCount').textContent = currentLevel;
+            document.getElementById('eggCount').textContent = eggsCollected;
+            document.getElementById('scoreCount').textContent = score;
+            document.getElementById('timeCount').textContent = timeLeft;
+            const healthPercentage = Math.max(0, (player.currentHealth / player.maxHealth) * 100);
+            document.getElementById('healthBar').style.width = `${healthPercentage}%`;
+
+            if (!gameActive && !showStartMenu) { 
+                ctx.textAlign = 'center';
+                let messageY = viewportHeight / 2; 
+                let finalScoreY = messageY + 70;
+                let restartMsgY = finalScoreY + 40;
+
+                if (player.currentHealth <= 0) {
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+                    ctx.fillRect(0, 0, viewportWidth, viewportHeight); 
+                    ctx.font = 'bold 40px Segoe UI'; ctx.fillStyle = '#ff5555'; ctx.strokeStyle = 'black'; ctx.lineWidth = 2;
+                    ctx.fillText('Game Over!', viewportWidth / 2, messageY - 30); ctx.strokeText('Game Over!', viewportWidth / 2, messageY - 30);
+                    ctx.font = '22px Segoe UI'; ctx.fillStyle = 'white';
+                    ctx.fillText('You ran out of health!', viewportWidth / 2, messageY + 15);
+                    ctx.font = '20px Segoe UI';
+                    ctx.fillText(`Current Score: ${score}`, viewportWidth / 2, finalScoreY);
+                    ctx.font = '18px Segoe UI'; ctx.fillText('Press R to Restart Level', viewportWidth / 2, restartMsgY);
+                } else if (timeLeft <= 0) {
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+                    ctx.fillRect(0, 0, viewportWidth, viewportHeight);
+                    ctx.font = 'bold 40px Segoe UI'; ctx.fillStyle = '#ff9955'; ctx.strokeStyle = 'black'; ctx.lineWidth = 2;
+                    ctx.fillText('Time Up!', viewportWidth / 2, messageY - 30); ctx.strokeText('Time Up!', viewportWidth / 2, messageY - 30);
+                    ctx.font = '22px Segoe UI'; ctx.fillStyle = 'white';
+                    ctx.fillText('You ran out of time!', viewportWidth / 2, messageY + 15);
+                     ctx.font = '20px Segoe UI';
+                    ctx.fillText(`Current Score: ${score}`, viewportWidth / 2, finalScoreY);
+                    ctx.font = '18px Segoe UI'; ctx.fillText('Press R to Restart Level', viewportWidth / 2, restartMsgY);
+                } else if (gameWon) { 
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)'; 
+                    ctx.fillRect(0, 0, viewportWidth, viewportHeight);
+                    ctx.font = 'bold 48px Segoe UI'; ctx.fillStyle = '#ffdd33'; ctx.strokeStyle = 'black'; ctx.lineWidth = 3;
+                    ctx.fillText('You Beat The Game!', viewportWidth / 2, messageY - 40); ctx.strokeText('You Beat The Game!', viewportWidth / 2, messageY - 40);
+                    ctx.font = '22px Segoe UI'; ctx.fillStyle = 'white';
+                    ctx.fillText(`All 10 Levels Cleared!`, viewportWidth / 2, messageY + 5);
+                    ctx.font = '24px Segoe UI';
+                    ctx.fillText(`Final Score: ${score}`, viewportWidth / 2, finalScoreY);
+                    ctx.font = '18px Segoe UI'; ctx.fillText('Open Pause Menu (P) to Play Again', viewportWidth / 2, restartMsgY);
+                } else {
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)'; 
+                    ctx.fillRect(0, 0, viewportWidth, viewportHeight);
+                    ctx.font = 'bold 40px Segoe UI'; ctx.fillStyle = '#55ff55'; ctx.strokeStyle = 'black'; ctx.lineWidth = 2;
+                    ctx.fillText('Level Cleared!', viewportWidth / 2, messageY); ctx.strokeText('Level Cleared!', viewportWidth / 2, messageY);
+                }
+            }
+        }
+        
+        function canStandUp() { 
+            const originalY = player.y; const originalH = player.height;
+            player.y -= (player.normalHeight - player.crouchHeight); 
+            player.height = player.normalHeight;
+            let clearToStand = true;
+            for (const platform of platforms) {
+                if (player.x + player.width > platform.x && player.x < platform.x + platform.width &&
+                    player.y + player.height > platform.y && player.y < platform.y + platform.height) {
+                    clearToStand = false; break;
+                }
+            }
+            player.y = originalY; player.height = originalH;
+            return clearToStand;
+        }
+
+        function update() {
+            if (showStartMenu || gamePaused || (!gameActive && player.currentHealth > 0 && timeLeft > 0 && !gameWon)) return; 
+            if (!gameActive) return;
+
+            const RENDER_TIME = performance.now(); 
+            gameStartTime = gameStartTime || RENDER_TIME; 
+            const elapsedTime = (RENDER_TIME - gameStartTime - timePausedStartTotal) / 1000;
+            timeLeft = Math.max(0, baseTimeForLevel - Math.floor(elapsedTime));
+
+            if (player.dashCooldownTimer > 0) player.dashCooldownTimer--;
+            if (keys.Shift && !player.isDashing && player.dashCooldownTimer <= 0 && player.onGround) { 
+                player.isDashing = true; player.dashTimer = player.dashDuration;
+                player.invincible = true; player.invincibleTimer = player.dashDuration + 10; 
+                playSound('dash'); 
+                createParticles(player.x + player.width / 2, player.y + player.height / 2, 15, 'dash');
+            }
+
+            if (player.isDashing) {
+                player.dx = (player.facing === 'right' ? 1 : -1) * player.dashSpeed;
+                player.dy = 0; player.dashTimer--;
+                if (player.dashTimer <= 0) {
+                    player.isDashing = false; player.dashCooldownTimer = player.dashCooldown;
+                }
+            } else { 
+                player.dx = 0;
+                if (keys.a || keys.ArrowLeft) {player.dx = -player.speed; player.facing = 'left';}
+                if (keys.d || keys.ArrowRight) {player.dx = player.speed; player.facing = 'right';}
+            }
+
+            if (player.invincible) {
+                player.invincibleTimer--;
+                if (player.invincibleTimer <= 0) player.invincible = false;
+            }
+            
+            const tryingToCrouch = keys.s || keys.ArrowDown;
+            if (tryingToCrouch && !player.isJumping && player.onGround && !player.isDashing) { 
+                if (!player.isCrouching) {
+                    player.isCrouching = true; player.y += (player.normalHeight - player.crouchHeight); 
+                    player.height = player.crouchHeight; playSound('crouch'); 
+                }
+            } else { 
+                if (player.isCrouching) {
+                    if (canStandUp()) {
+                        player.isCrouching = false; player.y -= (player.normalHeight - player.crouchHeight); 
+                        player.height = player.normalHeight; playSound('stand'); 
+                    }
+                }
+            }
+
+            if ((keys.w || keys.ArrowUp) && !player.isJumping && player.onGround && !player.isDashing) {
+                player.dy = player.jumpPower; player.isJumping = true; player.onGround = false; 
+                playSound('jump'); createParticles(player.x + player.width / 2, player.y + player.height, 5, 'jump');
+            }
+            if (!player.onGround && !player.isDashing) player.dy += player.gravity; 
+            else if (player.onGround && !player.isDashing) player.dy = 0;
+
+            let nextX = player.x + player.dx; let nextY = player.y + player.dy; 
+            let landedThisFrame = false;
+            if (!player.isDashing) player.onGround = false; 
+
+            for (const platform of platforms) {
+                if (nextX + player.width > platform.x && nextX < platform.x + platform.width &&
+                    player.y + player.height > platform.y && player.y < platform.y + platform.height) {
+                    if (player.dx > 0) nextX = platform.x - player.width;
+                    else if (player.dx < 0) nextX = platform.x + platform.width;
+                    player.dx = 0; 
+                }
+                if (player.x + player.width > platform.x && player.x < platform.x + platform.width &&
+                    nextY + player.height > platform.y && nextY < platform.y + platform.height) {
+                    if (player.dy > 0 && player.y + player.height <= platform.y + 1) { 
+                        nextY = platform.y - player.height; player.dy = 0; 
+                        if (!player.onGround && !player.isJumping) landedThisFrame = true; 
+                        player.isJumping = false; player.onGround = true;
+                        if (platform.type === 'bounce' && !player.isDashing) {
+                            player.dy = player.jumpPower * 1.6; 
+                            player.isJumping = true; player.onGround = false;
+                            playSound('bounce'); 
+                            createParticles(player.x + player.width/2, platform.y, 10, 'jump');
+                        }
+                    } else if (player.dy < 0 && player.y >= platform.y + platform.height) { 
+                        nextY = platform.y + platform.height; player.dy = 0;
+                    }
+                }
+            }
+            if(landedThisFrame && !player.isDashing) createParticles(player.x + player.width/2, player.y + player.height, 8, 'land');
+
+            player.x = nextX; player.y = nextY;
+
+            if (player.x < 0) player.x = 0;
+            if (player.x + player.width > worldWidth) player.x = worldWidth - player.width; 
+            if (player.y < 0) { player.y = 0; player.dy = 0; }
+            if (player.y > worldHeight + player.height*2) player.currentHealth = 0; 
+
+            let targetCameraX = player.x - viewportWidth / 2 + player.width / 2;
+            camera.x = Math.max(0, Math.min(targetCameraX, worldWidth - viewportWidth));
+            
+            gigentEggs.forEach((egg) => { 
+                 if (!egg.collected && player.x < egg.x + egg.width + egg.glowSize && 
+                    player.x + player.width > egg.x - egg.glowSize &&
+                    player.y < egg.y + egg.height + egg.glowSize && 
+                    player.y + player.height > egg.y - egg.glowSize) {
+                    egg.collected = true; eggsCollected++; score += 100; playSound('collectEgg');
+                    createParticles(egg.x + egg.width / 2, egg.y + egg.height / 2, 10, 'egg');
+                }
+            });
+
+            for (let i = bosses.length - 1; i >= 0; i--) {
+                let boss = bosses[i];
+                boss.x += boss.dx;
+
+                let hitEdge = true;
+                for (const plat of platforms) {
+                    if (boss.x + boss.width/2 > plat.x && boss.x + boss.width/2 < plat.x + plat.width && 
+                        boss.y + boss.height === plat.y) {
+                        hitEdge = false; break;
+                    }
+                }
+                if (hitEdge || boss.x <= 0 || boss.x + boss.width >= worldWidth) {
+                    boss.dx *= -1; 
+                    boss.x += boss.dx; 
+                }
+
+                if (player.x < boss.x + boss.width && player.x + player.width > boss.x &&
+                    player.y < boss.y + boss.height && player.y + player.height > boss.y) {
+                    
+                    if (player.dy > 0 && player.y + player.height < boss.y + boss.height * 0.5) {
+                        boss.hp--;
+                        player.dy = player.jumpPower * 0.8; 
+                        playSound('bounce');
+                        createParticles(boss.x + boss.width/2, boss.y, 15, 'bossHit');
+                        
+                        if (boss.hp <= 0) {
+                            bosses.splice(i, 1);
+                            score += 500;
+                        }
+                    } else if (!player.invincible) {
+                        player.currentHealth -= 25;
+                        player.invincible = true;
+                        player.invincibleTimer = 60; 
+                        player.dx = (player.x < boss.x) ? -player.speed*2 : player.speed*2; 
+                        player.dy = -6;
+                        playSound('hurt');
+                    }
+                }
+            }
+            
+            updateEggsVisuals();
+            updateClouds(); 
+            updateParticles(); 
+
+            if (player.currentHealth <= 0 || timeLeft <= 0) { 
+                gameActive = false; playSound('gameOverTune'); gameWon = false;
+            } else {
+                let levelComplete = false;
+                if (currentLevel < MAX_LEVELS) {
+                    if (eggsCollected >= totalEggsInLevel && bosses.length === 0) levelComplete = true;
+                } else {
+                    if (bosses.length === 0) levelComplete = true;
+                }
+
+                if (levelComplete) {
+                    gameActive = false; 
+                    const bonus = timeLeft * BONUS_POINTS_PER_SECOND; score += bonus; 
+                    
+                    if (currentLevel < MAX_LEVELS) {
+                        playSound('winGameTune');
+                        scoreAtStartOfLevel = score; // Save score when moving to next level
+                        setTimeout(() => { loadLevel(currentLevel + 1); }, 2000);
+                    } else {
+                        gameWon = true; 
+                        playSound('winGameTune');
+                        showFireworksAnimation = true;
+                        for(let i = 0; i < 6; i++) createFireworkExplosion(Math.random() * viewportWidth, Math.random() * viewportHeight * 0.5 + viewportHeight * 0.1);
+                        if(fireworksInterval) clearInterval(fireworksInterval);
+                        fireworksInterval = setInterval(() => {
+                            if (!showFireworksAnimation || particles.filter(p=>p.type === 'firework_spark').length > 200) { 
+                                clearInterval(fireworksInterval); return;
+                            }
+                            createFireworkExplosion(Math.random() * viewportWidth, Math.random() * viewportHeight * 0.5 + viewportHeight * 0.1);
+                        }, 500); 
+                        setTimeout(() => { clearInterval(fireworksInterval); showFireworksAnimation = false; }, 8000); 
+                    }
+                }
+            }
+        }
+        
+        function updateClouds() {
+            clouds.forEach(cloud => {
+                cloud.x += cloud.speed;
+                const img = images[cloud.type];
+                const imgWidth = img ? img.width * cloud.scale : (cloud.type === 'cloud1' ? 100 : 70) * cloud.scale;
+                if (cloud.x > worldWidth + imgWidth) { 
+                    cloud.x = -imgWidth - Math.random() * 200; 
+                    cloud.y = Math.random() * (viewportHeight * 0.4);
+                }
+            });
+        }
+
+        function drawPlayer() {  
+            const drawY = player.y - camera.y; 
+            let playerImage;
+            if (player.isCrouching) playerImage = player.facing === 'right' ? images['player_crouch_right'] : images['player_crouch_left'];
+            else playerImage = player.facing === 'right' ? images['player_stand_right'] : images['player_stand_left'];
+
+            ctx.globalAlpha = 1;
+            if (player.invincible && Math.floor(Date.now() / 80) % 2 === 0) ctx.globalAlpha = 0.5;
+            
+            if (playerImage && playerImage.complete && playerImage.width > 0) { 
+                 ctx.drawImage(playerImage, player.x - camera.x, drawY, player.width, player.height);
+            } else { 
+                ctx.fillStyle = 'blue'; 
+                ctx.fillRect(player.x - camera.x, drawY, player.width, player.height);
+            }
+            ctx.globalAlpha = 1; 
+        }
+        function drawPlatforms() { 
+            platforms.forEach(platform => {
+                if (platform.x + platform.width > camera.x && platform.x < camera.x + viewportWidth) {
+                    ctx.fillStyle = platform.color;
+                    if (platform.type === 'bounce') ctx.fillStyle = '#76FF03'; 
+                    else if (platform.type === 'crouch') ctx.fillStyle = '#A1887F'; 
+                    ctx.fillRect(platform.x - camera.x, platform.y - camera.y, platform.width, platform.height);
+                }
+            });
+         }
+        function drawDecorations() { 
+            decorations.forEach(dec => {
+                const img = images[dec.type];
+                const imgHeight = (img?.height || (dec.type === 'plant1' ? 30 : 50));
+                const imgWidth = (img?.width || (dec.type === 'plant1' ? 25 : 35));
+
+                if (dec.x + imgWidth > camera.x && dec.x < camera.x + viewportWidth) {
+                    if (img && img.complete && img.width > 0) {
+                        ctx.drawImage(img, dec.x - camera.x, dec.y - camera.y, imgWidth, imgHeight);
+                    }
+                }
+            });
+        }
+        function drawClouds() { 
+            clouds.forEach(cloud => {
+                const parallaxFactor = cloud.speed * 2.5; 
+                const cloudDrawX = cloud.x - camera.x * parallaxFactor;
+                const img = images[cloud.type];
+                const baseWidth = cloud.type === 'cloud1' ? (images.cloud1?.width || 100) : (images.cloud2?.width || 70);
+                const baseHeight = cloud.type === 'cloud1' ? (images.cloud1?.height || 50) : (images.cloud2?.height || 35);
+                const imgWidth = baseWidth * cloud.scale;
+                const imgHeight = baseHeight * cloud.scale;
+
+                if (cloudDrawX + imgWidth > 0 && cloudDrawX < viewportWidth) { 
+                    if (img && img.complete && img.width > 0) {
+                        ctx.globalAlpha = cloud.opacity;
+                        ctx.drawImage(img, cloudDrawX, cloud.y - camera.y, imgWidth, imgHeight); 
+                        ctx.globalAlpha = 1;
+                    }
+                }
+            });
+        }
+        function drawEggs() { 
+            gigentEggs.forEach(egg => {
+                if (!egg.collected && egg.x + egg.width > camera.x && egg.x < camera.x + viewportWidth) {
+                    const eggCenterX = egg.x + egg.width / 2 - camera.x;
+                    const eggCenterY = egg.y + egg.height / 2 - camera.y; 
+
+                    if (egg.glowSize > 0) {
+                        ctx.fillStyle = `rgba(255, 223, 0, ${0.05 + (egg.glowSize / egg.maxGlow) * 0.25})`;
+                        ctx.beginPath();
+                        ctx.arc(eggCenterX, eggCenterY, egg.width / 2 + egg.glowSize * 1.5, 0, Math.PI * 2); 
+                        ctx.fill();
+                    }
+                    
+                    const eggImg = images['egg'];
+                    if (eggImg && eggImg.complete && eggImg.width > 0) {
+                        ctx.drawImage(eggImg, egg.x - camera.x, egg.y - camera.y, egg.width, egg.height);
+                    } else { 
+                        ctx.fillStyle = egg.color; ctx.beginPath();
+                        ctx.ellipse(eggCenterX, eggCenterY, egg.width/2, egg.height/2, 0,0, Math.PI*2); ctx.fill();
+                    }
+                }
+            });
+         }
+        function drawBosses() {
+            bosses.forEach(boss => {
+                if (boss.x + boss.width > camera.x && boss.x < camera.x + viewportWidth) {
+                    ctx.fillStyle = boss.color;
+                    ctx.fillRect(boss.x - camera.x, boss.y - camera.y, boss.width, boss.height);
+                    
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(boss.x - camera.x, boss.y - camera.y - 10, boss.width, 5);
+                    ctx.fillStyle = 'red';
+                    ctx.fillRect(boss.x - camera.x, boss.y - camera.y - 10, boss.width * (boss.hp / boss.maxHp), 5);
+                }
+            });
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, viewportWidth, viewportHeight); 
+            drawClouds(); 
+            drawDecorations();
+            drawPlatforms();
+            drawEggs();
+            drawBosses();
+            drawPlayer();
+            drawParticles(); 
+            updateUIonScreen(); 
+        }
+
+        function gameLoop(timestamp) {
+            if (showStartMenu) { 
+                draw(); 
+            } else {
+                 update(); 
+                 draw();   
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
+        function loadLevel(level) {
+            currentLevel = level;
+            eggsCollected = 0; gameWon = false;
+            
+            if (currentLevel < MAX_LEVELS) {
+                worldWidth = 3200;
+                baseTimeForLevel = GAME_DURATION_SECONDS;
+            } else {
+                worldWidth = viewportWidth; 
+                baseTimeForLevel = 30; 
+            }
+
+            initPlatforms(currentLevel);
+            initEggs(currentLevel); 
+            initBosses(currentLevel);
+            initDecorations(currentLevel);
+            initClouds(); 
+            
+            player.x = 50; 
+            player.height = player.normalHeight; 
+            player.isCrouching = false; player.facing = 'right';
+            player.y = platforms[0].y - player.height; 
+            player.dx = 0; player.dy = 0;
+            player.isJumping = false; player.onGround = true;
+            player.invincible = false; player.invincibleTimer = 0;
+            player.isDashing = false; player.dashTimer = 0; player.dashCooldownTimer = 0;
+            player.currentHealth = player.maxHealth; // Reset health here
+            camera.x = 0; 
+            
+            timeLeft = baseTimeForLevel;
+            gameActive = true; 
+            gamePaused = false; 
+            showStartMenu = false; 
+            showFireworksAnimation = false; 
+            particles.length = 0; 
+            if(fireworksInterval) clearInterval(fireworksInterval);
+
+            timePausedStartTotal = 0; 
+            gameStartTime = performance.now(); 
+            playSound('startGameTune'); 
+
+            document.getElementById('timeCount').textContent = timeLeft; 
+            document.getElementById('pauseMenu').classList.remove('active'); 
+            document.getElementById('startMenu').classList.remove('active'); 
+            canvas.classList.remove('paused-canvas');
+            updateUIonScreen(); 
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            executeAfterImagesLoad(() => {
+                showStartMenu = true; 
+                requestAnimationFrame(gameLoop); 
+            });
+        });
+    </script>
+</body>
+</html>
