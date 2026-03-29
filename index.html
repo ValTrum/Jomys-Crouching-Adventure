@@ -147,7 +147,24 @@
             transition: transform 0.1s, background 0.1s;
         }
         .dash-btn { width: auto; padding: 0 20px; border-radius: 30px; font-size: 16px; font-weight: bold; }
-        @media (pointer: coarse) { #mobileControls { display: flex; } #controls { display: none; } }
+        /* Pause & mute buttons — always visible on touch devices, top-right corner */
+        #mobileSystemBtns {
+            display: none;
+            position: fixed; top: 12px; right: 12px;
+            z-index: 200;
+            flex-direction: column; gap: 8px;
+            pointer-events: auto;
+        }
+        .sys-btn {
+            background: rgba(30,30,50,0.85); border: 2px solid rgba(255,255,255,0.35);
+            color: white; width: 44px; height: 44px; border-radius: 10px;
+            font-size: 20px; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; touch-action: none; box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+            transition: transform 0.1s, background 0.1s;
+            user-select: none;
+        }
+        .sys-btn:active { transform: scale(0.88); background: rgba(80,80,120,0.95); }
+        @media (pointer: coarse) { #mobileControls { display: flex; } #controls { display: none; } #mobileSystemBtns { display: flex; } }
         @media (orientation: landscape) and (max-height: 600px) {
             body { padding-top: 0; }
             #gameInfoBar { padding: 5px 0; margin-bottom: 5px; }
@@ -178,6 +195,12 @@
     <canvas id="gameCanvas" width="1000" height="400"></canvas>
     
     <div id="powerupBar"></div>
+
+    <!-- Pause & Mute — mobile only, fixed top-right -->
+    <div id="mobileSystemBtns">
+        <div class="sys-btn" id="btnMobilePause" title="Pause">⏸</div>
+        <div class="sys-btn" id="btnMobileMute"  title="Mute">🔊</div>
+    </div>
 
     <div id="controls">
         <span>W/Up: Jump (×2) | A/Left: Left | D/Right: Right | S/Down: Crouch | Shift: Dash | P: Pause | R: Restart</span>
@@ -324,15 +347,28 @@
     const PLAYER_CROUCH_HEIGHT = PLAYER_NORMAL_HEIGHT / 2;
 
     // ============================================================
+    // MUTE STATE
+    // ============================================================
+    let isMuted = false;
+    function setMute(muted) {
+        isMuted = muted;
+        if (bgMusic) bgMusic.muted = isMuted;
+        const btn = document.getElementById('btnMobileMute');
+        if (btn) btn.textContent = isMuted ? '🔇' : '🔊';
+    }
+    function toggleMute() { setMute(!isMuted); }
+
+    // ============================================================
     // BACKGROUND MUSIC
     // ============================================================
     let bgMusic = null;
     function playBgMusic(track, ext = 'mp3') {
-    if (bgMusic) { bgMusic.pause(); bgMusic = null; }
-    try {
-        bgMusic = new Audio('sounds/' + track + '.' + ext);
+        if (bgMusic) { bgMusic.pause(); bgMusic = null; }
+        try {
+            bgMusic = new Audio('sounds/' + track + '.' + ext);
             bgMusic.loop = true;
             bgMusic.volume = 0.35;
+            bgMusic.muted = isMuted;
             bgMusic.play().catch(()=>{});
         } catch(e) {}
     }
@@ -1063,26 +1099,33 @@
     function setupTouchControl(btnId, keyProp1, keyProp2, isJumpBtn) {
         const btn = document.getElementById(btnId);
         if (!btn) return;
+
+        btn.style.touchAction = 'none'; // Tell browser this element owns all pointer input
+
         const press = e => {
-            e.preventDefault();
-            if (keyProp1) keys[keyProp1]=true;
-            if (keyProp2) keys[keyProp2]=true;
-            if (isJumpBtn) jumpPressed=true;
-            btn.style.transform='scale(0.9)';
-            btn.style.background='rgba(100,100,150,0.9)';
+            if (e.cancelable) e.preventDefault();
+            if (keyProp1) keys[keyProp1] = true;
+            if (keyProp2) keys[keyProp2] = true;
+            if (isJumpBtn) jumpPressed = true;
+            btn.style.transform = 'scale(0.9)';
+            btn.style.background = 'rgba(100,100,150,0.9)';
         };
         const release = e => {
-            e.preventDefault();
-            if (keyProp1) keys[keyProp1]=false;
-            if (keyProp2) keys[keyProp2]=false;
-            btn.style.transform=''; btn.style.background='';
+            if (e.cancelable) e.preventDefault();
+            if (keyProp1) keys[keyProp1] = false;
+            if (keyProp2) keys[keyProp2] = false;
+            btn.style.transform = '';
+            btn.style.background = '';
         };
-        btn.addEventListener('touchstart', press, {passive:false});
-        btn.addEventListener('touchend', release, {passive:false});
-        btn.addEventListener('touchcancel', release, {passive:false});
-        btn.addEventListener('mousedown', press);
-        btn.addEventListener('mouseup', release);
-        btn.addEventListener('mouseleave', release);
+
+        // Pointer Events — one unified handler for touch, mouse & stylus
+        btn.addEventListener('pointerdown',   press);
+        btn.addEventListener('pointerup',     release);
+        btn.addEventListener('pointercancel', release);
+        btn.addEventListener('pointerout',    release); // finger slides off button mid-press
+
+        // Prevent long-press context menus on mobile
+        btn.addEventListener('contextmenu', e => e.preventDefault());
     }
 
     document.getElementById('btnFullscreen').addEventListener('click', e => {
@@ -1099,6 +1142,32 @@
         setupTouchControl('btnJump', 'w', 'ArrowUp', true);
         setupTouchControl('btnCrouch', 's', 'ArrowDown', false);
         setupTouchControl('btnDash', 'Shift', null, false);
+
+        // Mobile pause button
+        const pauseBtn = document.getElementById('btnMobilePause');
+        if (pauseBtn) {
+            pauseBtn.style.touchAction = 'none';
+            pauseBtn.addEventListener('pointerdown', e => {
+                e.preventDefault();
+                if (!showStartMenu) {
+                    togglePause();
+                    pauseBtn.textContent = gamePaused ? '▶' : '⏸';
+                }
+            });
+            pauseBtn.addEventListener('contextmenu', e => e.preventDefault());
+        }
+
+        // Mobile mute button
+        const muteBtn = document.getElementById('btnMobileMute');
+        if (muteBtn) {
+            muteBtn.style.touchAction = 'none';
+            muteBtn.addEventListener('pointerdown', e => {
+                e.preventDefault();
+                toggleMute();
+            });
+            muteBtn.addEventListener('contextmenu', e => e.preventDefault());
+        }
+
         executeAfterImagesLoad(() => { showStartMenu=true; renderLeaderboard('startLeaderboard'); requestAnimationFrame(gameLoop); });
     });
 
@@ -1135,6 +1204,8 @@
         gamePaused=!gamePaused;
         document.getElementById('pauseMenu').classList.toggle('active', gamePaused);
         canvas.classList.toggle('paused-canvas', gamePaused);
+        const pauseBtn = document.getElementById('btnMobilePause');
+        if (pauseBtn) pauseBtn.textContent = gamePaused ? '▶' : '⏸';
         if (gamePaused) { lastPauseTime=performance.now(); playSound('pause'); }
         else { if(gameActive&&lastPauseTime) timePausedStartTotal+=(performance.now()-lastPauseTime); lastUpdateTime=performance.now(); lastPauseTime=0; playSound('resume'); }
     }
@@ -1143,6 +1214,7 @@
     // SOUND
     // ============================================================
     function playSound(name) {
+        if (isMuted) return;
         try {
             const a = new Audio('sounds/'+name+'.mp3');
             const p = a.play();
@@ -1681,8 +1753,8 @@
         lastUpdateTime=performance.now();
 
         // Music — boss level gets boss music, others get level music
-	if (currentLevel===MAX_LEVELS) playBgMusic('music_boss', 'ogg');
-	else if (currentLevel===1) playBgMusic('music_levels', 'mp3');
+        if (currentLevel===MAX_LEVELS) playBgMusic('music_boss', 'ogg');
+        else if (currentLevel===1) playBgMusic('music_levels', 'mp3');
         // (continues across levels without restart)
 
         document.getElementById('timeCount').textContent=timeLeft;
