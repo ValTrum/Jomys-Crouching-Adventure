@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Jomy's Crouching Adventure - v2.0</title>
+    <title>Jomy's Crouching Adventure - v2.0.1</title>
     <style>
         body { 
             margin: 0; 
@@ -87,7 +87,7 @@
             background: linear-gradient(to bottom, #2a2a4a, #1a1a3a);
             padding: 30px 40px; border-radius: 10px; text-align: center;
             max-width: 500px; width: 85%;
-            box-shadow: 0 5px 25px rgba(0,0,0,0.5); color: #e0e0e0;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.5); color: #e0e0e0; 
         }
         .menu-title { font-size: 32px; margin-bottom: 20px; color: #FFD700; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
         .menu-content p { font-size: 16px; line-height: 1.6; margin-bottom: 25px; }
@@ -147,6 +147,7 @@
             transition: transform 0.1s, background 0.1s;
         }
         .dash-btn { width: auto; padding: 0 20px; border-radius: 30px; font-size: 16px; font-weight: bold; }
+        
         /* Pause & mute buttons — always visible on touch devices, top-right corner */
         #mobileSystemBtns {
             display: none;
@@ -164,6 +165,7 @@
             user-select: none;
         }
         .sys-btn:active { transform: scale(0.88); background: rgba(80,80,120,0.95); }
+        
         @media (pointer: coarse) { #mobileControls { display: flex; } #controls { display: none; } #mobileSystemBtns { display: flex; } }
         @media (orientation: landscape) and (max-height: 600px) {
             body { padding-top: 0; }
@@ -196,7 +198,6 @@
     
     <div id="powerupBar"></div>
 
-    <!-- Pause & Mute — mobile only, fixed top-right -->
     <div id="mobileSystemBtns">
         <div class="sys-btn" id="btnMobilePause" title="Pause">⏸</div>
         <div class="sys-btn" id="btnMobileMute"  title="Mute">🔊</div>
@@ -447,7 +448,7 @@
     // POWER-UPS
     // ============================================================
     const powerupTypes = [
-        { type: 'speed',      label: '⚡ Speed',   color: '#FFFF00', duration: 300, desc: 'Speed Boost' },
+        { type: 'speed',      label: '⚡ Speed',  color: '#FFFF00', duration: 300, desc: 'Speed Boost' },
         { type: 'invincible', label: '⭐ Star',     color: '#FF69B4', duration: 240, desc: 'Invincible' },
         { type: 'magnet',     label: '🧲 Magnet',  color: '#00BFFF', duration: 360, desc: 'Egg Magnet' },
     ];
@@ -1096,14 +1097,13 @@
         if (e.key==='ArrowRight') keys.ArrowRight=false;
     });
 
+    // --- REBUILT TOUCH CONTROLS ---
     function setupTouchControl(btnId, keyProp1, keyProp2, isJumpBtn) {
         const btn = document.getElementById(btnId);
         if (!btn) return;
 
-        btn.style.touchAction = 'none'; // Tell browser this element owns all pointer input
-
         const press = e => {
-            if (e.cancelable) e.preventDefault();
+            if (e.cancelable) e.preventDefault(); // Prevents zooming/swiping
             if (keyProp1) keys[keyProp1] = true;
             if (keyProp2) keys[keyProp2] = true;
             if (isJumpBtn) jumpPressed = true;
@@ -1118,13 +1118,15 @@
             btn.style.background = '';
         };
 
-        // Pointer Events — one unified handler for touch, mouse & stylus
-        btn.addEventListener('pointerdown',   press);
-        btn.addEventListener('pointerup',     release);
-        btn.addEventListener('pointercancel', release);
-        btn.addEventListener('pointerout',    release); // finger slides off button mid-press
+        // Use strict target-locked touch events
+        btn.addEventListener('touchstart', press, {passive: false});
+        btn.addEventListener('touchend', release, {passive: false});
+        btn.addEventListener('touchcancel', release, {passive: false});
 
-        // Prevent long-press context menus on mobile
+        // Mouse fallbacks
+        btn.addEventListener('mousedown', press);
+        btn.addEventListener('mouseup', release);
+        btn.addEventListener('mouseleave', release);
         btn.addEventListener('contextmenu', e => e.preventDefault());
     }
 
@@ -1146,25 +1148,24 @@
         // Mobile pause button
         const pauseBtn = document.getElementById('btnMobilePause');
         if (pauseBtn) {
-            pauseBtn.style.touchAction = 'none';
-            pauseBtn.addEventListener('pointerdown', e => {
-                e.preventDefault();
-                if (!showStartMenu) {
-                    togglePause();
-                    pauseBtn.textContent = gamePaused ? '▶' : '⏸';
-                }
-            });
+            const toggleP = e => {
+                if (e.cancelable) e.preventDefault();
+                if (!showStartMenu) togglePause();
+            };
+            pauseBtn.addEventListener('touchstart', toggleP, {passive: false});
+            pauseBtn.addEventListener('mousedown', toggleP);
             pauseBtn.addEventListener('contextmenu', e => e.preventDefault());
         }
 
         // Mobile mute button
         const muteBtn = document.getElementById('btnMobileMute');
         if (muteBtn) {
-            muteBtn.style.touchAction = 'none';
-            muteBtn.addEventListener('pointerdown', e => {
-                e.preventDefault();
+            const toggleM = e => {
+                if (e.cancelable) e.preventDefault();
                 toggleMute();
-            });
+            };
+            muteBtn.addEventListener('touchstart', toggleM, {passive: false});
+            muteBtn.addEventListener('mousedown', toggleM);
             muteBtn.addEventListener('contextmenu', e => e.preventDefault());
         }
 
@@ -1762,6 +1763,10 @@
         document.getElementById('startMenu').classList.remove('active');
         document.getElementById('levelCompleteMenu').classList.remove('active');
         canvas.classList.remove('paused-canvas');
+        
+        const pauseBtn = document.getElementById('btnMobilePause');
+        if (pauseBtn) pauseBtn.textContent = '⏸';
+        
         renderPowerupBar();
         drawUI();
         playSound('startGameTune');
