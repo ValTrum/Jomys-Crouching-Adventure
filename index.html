@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Jomy's Crouching Adventure - v2.0.1</title>
+    <title>Jomy's Crouching Adventure - v2.2</title>
     <style>
         body { 
             margin: 0; 
@@ -56,7 +56,7 @@
         }
         h2 { margin: 0; font-size: 24px; color: #FFD700; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
         #gameInfo { 
-            font-size: 18px; width: 100%; max-width: 800px;
+            font-size: 18px; width: 100%; max-width: 900px;
             display: flex; justify-content: space-around; flex-wrap: wrap; 
         }
         #healthBarContainer { 
@@ -138,7 +138,7 @@
             justify-content: space-between; padding: 0 20px; box-sizing: border-box;
             z-index: 50; pointer-events: none;
         }
-        .control-cluster { display: flex; gap: 15px; pointer-events: auto; }
+        .control-cluster { display: flex; gap: 10px; pointer-events: auto; align-items: center; }
         .touch-btn {
             background: rgba(40,40,60,0.7); border: 2px solid rgba(255,255,255,0.4);
             color: white; width: 60px; height: 60px; border-radius: 50%; font-size: 24px;
@@ -146,23 +146,19 @@
             user-select: none; touch-action: none; box-shadow: 0 4px 8px rgba(0,0,0,0.5);
             transition: transform 0.1s, background 0.1s;
         }
-        .dash-btn { width: auto; padding: 0 20px; border-radius: 30px; font-size: 16px; font-weight: bold; }
+        .dash-btn { width: auto; padding: 0 15px; border-radius: 30px; font-size: 16px; font-weight: bold; height: 50px;}
         
-        /* Pause & mute buttons — always visible on touch devices, top-right corner */
+        /* Pause & mute buttons */
         #mobileSystemBtns {
-            display: none;
-            position: fixed; top: 12px; right: 12px;
-            z-index: 200;
-            flex-direction: column; gap: 8px;
-            pointer-events: auto;
+            display: none; position: fixed; top: 12px; right: 12px; z-index: 200;
+            flex-direction: column; gap: 8px; pointer-events: auto;
         }
         .sys-btn {
             background: rgba(30,30,50,0.85); border: 2px solid rgba(255,255,255,0.35);
             color: white; width: 44px; height: 44px; border-radius: 10px;
             font-size: 20px; display: flex; align-items: center; justify-content: center;
             cursor: pointer; touch-action: none; box-shadow: 0 3px 8px rgba(0,0,0,0.5);
-            transition: transform 0.1s, background 0.1s;
-            user-select: none;
+            transition: transform 0.1s, background 0.1s; user-select: none;
         }
         .sys-btn:active { transform: scale(0.88); background: rgba(80,80,120,0.95); }
         
@@ -174,8 +170,9 @@
             #healthBarContainer { margin-top: 2px; margin-bottom: 4px; height: 12px; width: 150px; }
             #gameInfo { font-size: 14px; }
             canvas { max-height: calc(100vh - 120px); }
-            #mobileControls { bottom: 10px; padding: 0 40px; }
+            #mobileControls { bottom: 10px; padding: 0 20px; }
             .touch-btn { width: 50px; height: 50px; font-size: 20px; }
+            .dash-btn { height: 40px; padding: 0 10px; font-size: 14px;}
         }
     </style>
 </head>
@@ -190,6 +187,7 @@
             <div class="game-stat"><span class="stat-icon">🚩</span><span>Level: <span id="levelCount">1</span> / 10</span></div>
             <div class="game-stat" id="eggStatDisplay"><span class="stat-icon">🥚</span><span>Eggs: <span id="eggCount">0</span> / <span id="totalEggCount">0</span></span></div>
             <div class="game-stat"><span class="stat-icon">🏆</span><span>Score: <span id="scoreCount">0</span></span></div>
+            <div class="game-stat"><span class="stat-icon">⚔️</span><span>Weapon: <strong id="weaponDisplay" style="color: #00BFFF;">None</strong></span></div>
             <div class="game-stat"><span class="stat-icon">⏱️</span><span>Time: <span id="timeCount">40</span>s</span></div>
         </div>
     </div>
@@ -204,7 +202,7 @@
     </div>
 
     <div id="controls">
-        <span>W/Up: Jump (×2) | A/Left: Left | D/Right: Right | S/Down: Crouch | Shift: Dash | P: Pause | R: Restart</span>
+        <span>W/Up: Jump (×2) | A/Left: Left | D/Right: Right | S/Down: Crouch | Shift: Dash | Space: Attack | P: Pause | R: Restart</span>
     </div>
 
     <div id="mobileControls">
@@ -213,6 +211,7 @@
             <div class="touch-btn" id="btnRight">►</div>
         </div>
         <div class="control-cluster">
+            <div class="touch-btn dash-btn" id="btnAttack">⚔️ Attack</div>
             <div class="touch-btn dash-btn" id="btnDash">Dash</div>
             <div class="touch-btn" id="btnCrouch">▼</div>
             <div class="touch-btn" id="btnJump">▲</div>
@@ -222,7 +221,7 @@
     <div id="startMenu" class="menu-overlay active">
         <div class="menu-content">
             <div class="menu-title">Jomy's Crouching Adventure</div>
-            <p>Collect eggs and pets! Double-jump, dash, and grab power-ups. Stomp bosses to defeat them. Reach the <strong>🏁 Goal Flag</strong> to complete each level!</p>
+            <p>Collect eggs and pets! At <strong>1500 points</strong> you unlock the Mini Gun, and at <strong>2300 points</strong> you unlock the Katana!</p>
             <button id="startButton" class="btn btn-primary pulse">Start Game</button>
             <div id="startLeaderboard" class="leaderboard"></div>
         </div>
@@ -277,8 +276,9 @@
     let activePets = [], activePetsAtStartOfLevel = [], uncollectedPets = [];
     let lastUpdateTime = 0;
     let screenShake = { duration: 0, intensity: 0 };
-    let levelStars = [];         // stars per level for the run
-    let levelScoreGained = 0;   // score gained THIS level only
+    let levelStars = [];         
+    let levelScoreGained = 0;   
+    let currentWeapon = 'None';
 
     // ============================================================
     // LEADERBOARD (localStorage)
@@ -292,7 +292,7 @@
     }
     function addScoreToLeaderboard(sc) {
         let lb = getLeaderboard();
-        const initials = 'YOU'; // could prompt player name later
+        const initials = 'YOU'; 
         lb.push({ name: initials, score: Math.floor(sc), date: new Date().toLocaleDateString() });
         lb.sort((a,b) => b.score - a.score);
         lb = lb.slice(0, 5);
@@ -314,11 +314,7 @@
             </div>`).join('');
     }
 
-    // ============================================================
-    // STAR RATING
-    // ============================================================
     function calcStars(timeRemaining, baseTime, healthPct, eggsGot, eggsTotal, bossesKilled) {
-        // Performance score 0-100
         let timePct = timeRemaining / baseTime;
         let eggPct  = eggsTotal > 0 ? eggsGot / eggsTotal : 1;
         let perf = (timePct * 0.4 + healthPct * 0.35 + eggPct * 0.25) * 100;
@@ -331,25 +327,16 @@
         return [1,2,3].map(i => `<span class="${i<=stars?'star-lit':'star-dim'}">★</span>`).join('');
     }
 
-    // ============================================================
-    // TIMING
-    // ============================================================
     const GAME_DURATION_SECONDS = 40;
     let baseTimeForLevel = GAME_DURATION_SECONDS;
     let timeLeft = GAME_DURATION_SECONDS;
     let gameStartTime, timePausedStartTotal = 0, lastPauseTime;
     const BONUS_POINTS_PER_SECOND = 10;
 
-    // ============================================================
-    // CONSTANTS
-    // ============================================================
     const EGG_HEIGHT = 40;
     const PLAYER_NORMAL_HEIGHT = 50;
     const PLAYER_CROUCH_HEIGHT = PLAYER_NORMAL_HEIGHT / 2;
 
-    // ============================================================
-    // MUTE STATE
-    // ============================================================
     let isMuted = false;
     function setMute(muted) {
         isMuted = muted;
@@ -359,9 +346,6 @@
     }
     function toggleMute() { setMute(!isMuted); }
 
-    // ============================================================
-    // BACKGROUND MUSIC
-    // ============================================================
     let bgMusic = null;
     function playBgMusic(track, ext = 'mp3') {
         if (bgMusic) { bgMusic.pause(); bgMusic = null; }
@@ -378,8 +362,19 @@
     }
 
     // ============================================================
-    // LEVEL BACKGROUNDS
+    // SOUND EFFECTS
     // ============================================================
+    function playSound(name) {
+        if (isMuted) return;
+        try {
+            const a = new Audio('sounds/' + name + '.mp3');
+            const p = a.play();
+            if (p) p.catch(e => {
+                if (e.name !== 'NotAllowedError' && e.name !== 'AbortError') console.error(e);
+            });
+        } catch(e) {}
+    }
+
     const levelBackgrounds = [
         'linear-gradient(to bottom, #87CEEB, #1E90FF)',
         'linear-gradient(to bottom, #FF7E5F, #FEB47B)',
@@ -394,7 +389,7 @@
     ];
 
     // ============================================================
-    // IMAGE LOADING
+    // IMAGE LOADING 
     // ============================================================
     const images = {};
     const imagesToLoad = [
@@ -416,43 +411,45 @@
         { name: 'plant2', src: 'https://via.placeholder.com/35x50/3CB371/3CB371.png?text=.' }
     ];
     let imagesLoadedCount = 0;
+    
     function executeAfterImagesLoad(callback) {
         if (imagesToLoad.length === 0) { callback(); return; }
+        
+        let called = false;
+        const done = () => { if (!called) { called = true; callback(); } };
+        
+        // Failsafe timer so the game will start even if an image is fully blocked 
+        setTimeout(done, 2000); 
+
         imagesToLoad.forEach(imgData => {
             images[imgData.name] = new Image();
-            images[imgData.name].onload = () => { if (++imagesLoadedCount === imagesToLoad.length) callback(); };
-            images[imgData.name].onerror = () => { if (++imagesLoadedCount === imagesToLoad.length) callback(); };
+            images[imgData.name].onload = () => { if (++imagesLoadedCount === imagesToLoad.length) done(); };
+            images[imgData.name].onerror = () => { if (++imagesLoadedCount === imagesToLoad.length) done(); };
             images[imgData.name].src = imgData.src;
         });
     }
 
-    // ============================================================
-    // PLAYER
-    // ============================================================
     const player = {
         x: 50, y: worldHeight - 70, width: 30, height: PLAYER_NORMAL_HEIGHT,
         normalHeight: PLAYER_NORMAL_HEIGHT, crouchHeight: PLAYER_CROUCH_HEIGHT,
         speed: 4, dx: 0, dy: 0, gravity: 0.45, jumpPower: -12,
         isJumping: false, onGround: true, isCrouching: false,
-        jumpsUsed: 0, maxJumps: 2,   // DOUBLE JUMP
+        jumpsUsed: 0, maxJumps: 2, 
         maxHealth: 100, currentHealth: 100,
         facing: 'right', invincible: false, invincibleTimer: 0, invincibleDuration: 90,
         isDashing: false, dashSpeed: 10, dashDuration: 12, dashTimer: 0,
         dashCooldown: 90, dashCooldownTimer: 0,
+        attackCooldown: 0, katanaActive: 0, projectiles: [],
         history: [],
-        // Power-up state
         powerups: { speed: 0, invincible: 0, magnet: 0 }
     };
 
-    // ============================================================
-    // POWER-UPS
-    // ============================================================
     const powerupTypes = [
         { type: 'speed',      label: '⚡ Speed',  color: '#FFFF00', duration: 300, desc: 'Speed Boost' },
         { type: 'invincible', label: '⭐ Star',     color: '#FF69B4', duration: 240, desc: 'Invincible' },
         { type: 'magnet',     label: '🧲 Magnet',  color: '#00BFFF', duration: 360, desc: 'Egg Magnet' },
     ];
-    let activePowerupItems = []; // pickable on the ground
+    let activePowerupItems = []; 
 
     function initPowerups(level) {
         activePowerupItems = [];
@@ -478,6 +475,7 @@
 
     function renderPowerupBar() {
         const bar = document.getElementById('powerupBar');
+        if (!bar) return;
         bar.innerHTML = '';
         Object.entries(player.powerups).forEach(([type, frames]) => {
             if (frames > 0) {
@@ -491,9 +489,6 @@
         });
     }
 
-    // ============================================================
-    // CLOUDS
-    // ============================================================
     const clouds = [];
     function initClouds() {
         clouds.length = 0;
@@ -509,14 +504,10 @@
         }
     }
 
-    // ============================================================
-    // PLATFORMS (including moving platforms)
-    // ============================================================
     const platforms = [];
     function initPlatforms(level) {
         platforms.length = 0;
         if (level < MAX_LEVELS) {
-            // Static platforms
             const statics = [
                 { x: 0,    y: worldHeight-20,  width: 3200, height: 20, color: '#228B22', type: 'ground' },
                 { x: 150,  y: worldHeight-100, width: 120,  height: 20, color: '#654321', type: 'normal' },
@@ -539,7 +530,6 @@
             ];
             statics.forEach(p => platforms.push({...p, moving: false}));
 
-            // Moving platforms — introduced from level 2 onwards, more as levels go up
             const count = Math.min(level - 1, 5);
             const movingDefs = [
                 { x: 550,  y: worldHeight-160, width: 100, height: 20, color: '#2196F3', type: 'moving', range: 120, speed: 1.2 },
@@ -560,13 +550,11 @@
                 });
             }
         } else {
-            // Level 10 – boss arena
             platforms.push(
                 { x: 0,   y: worldHeight-20,  width: viewportWidth, height: 20, color: '#8B0000', type: 'ground', moving: false },
                 { x: 150, y: worldHeight-120, width: 200, height: 20, color: '#444', type: 'normal', moving: false },
                 { x: 650, y: worldHeight-120, width: 200, height: 20, color: '#444', type: 'normal', moving: false },
                 { x: 400, y: worldHeight-220, width: 200, height: 20, color: '#444', type: 'normal', moving: false },
-                // Moving platforms in boss arena
                 { x: 300, y: worldHeight-170, width: 80, height: 20, color: '#E91E63', type: 'moving', moving: true, originX: 300, originY: worldHeight-170, range: 200, speed: 2.5, dir: 1, t: 0, vertical: false }
             );
         }
@@ -584,25 +572,20 @@
         });
     }
 
-    // ============================================================
-    // GOAL FLAG
-    // ============================================================
     let goalFlag = null;
     function initGoalFlag(level) {
         if (level < MAX_LEVELS) {
             goalFlag = { x: 3140, y: worldHeight - 20 - 80, width: 30, height: 80, reached: false };
         } else {
-            goalFlag = null; // Level 10 ends by defeating both bosses
+            goalFlag = null; 
         }
     }
 
     function drawGoalFlag() {
         if (!goalFlag) return;
         const gx = goalFlag.x - camera.x;
-        // Pole
         ctx.fillStyle = '#888';
         ctx.fillRect(gx + 10, goalFlag.y - camera.y, 5, goalFlag.height);
-        // Flag
         ctx.fillStyle = '#FFD700';
         ctx.beginPath();
         ctx.moveTo(gx + 15, goalFlag.y - camera.y);
@@ -610,7 +593,6 @@
         ctx.lineTo(gx + 15, goalFlag.y - camera.y + 30);
         ctx.closePath();
         ctx.fill();
-        // Label
         ctx.font = 'bold 11px Segoe UI';
         ctx.fillStyle = 'white';
         ctx.textAlign = 'center';
@@ -618,9 +600,6 @@
         ctx.textAlign = 'left';
     }
 
-    // ============================================================
-    // DECORATIONS
-    // ============================================================
     const decorations = [];
     function initDecorations(level) {
         decorations.length = 0;
@@ -642,9 +621,6 @@
         }
     }
 
-    // ============================================================
-    // PARTICLES
-    // ============================================================
     const particles = [];
     function createParticles(x, y, count, type, customColor) {
         for (let i = 0; i < count; i++) {
@@ -687,10 +663,7 @@
         ctx.globalAlpha = 1;
     }
 
-    // ============================================================
-    // EGG HATCH ANIMATION
-    // ============================================================
-    const hatchAnimations = []; // { x, y, frame, maxFrames, color }
+    const hatchAnimations = []; 
     function triggerHatchAnimation(x, y, color) {
         hatchAnimations.push({ x, y, frame: 0, maxFrames: 40, color });
     }
@@ -706,7 +679,6 @@
             const cx = h.x - camera.x, cy = h.y - camera.y;
             const r = 18 + progress * 30;
             const alpha = Math.max(0, 1 - progress);
-            // Cracking shell effect
             ctx.globalAlpha = alpha;
             ctx.strokeStyle = h.color;
             ctx.lineWidth = 3;
@@ -718,7 +690,6 @@
                 const y2 = cy + Math.sin(angle)*r;
                 ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
             }
-            // Glow ring
             const grad = ctx.createRadialGradient(cx,cy,0,cx,cy,r);
             grad.addColorStop(0, h.color+'88');
             grad.addColorStop(1, h.color+'00');
@@ -728,14 +699,7 @@
         });
     }
 
-    // ============================================================
-    // BOSS DEFEAT FLASH
-    // ============================================================
-    let bossDefeatFlash = 0; // frames of screen flash remaining
-
-    // ============================================================
-    // SCREEN SHAKE
-    // ============================================================
+    let bossDefeatFlash = 0; 
     function triggerShake(intensity, duration) {
         if (intensity > screenShake.intensity) {
             screenShake.intensity = intensity;
@@ -743,9 +707,6 @@
         }
     }
 
-    // ============================================================
-    // PETS
-    // ============================================================
     function initPets(level) {
         uncollectedPets = [];
         if (level === MAX_LEVELS) return;
@@ -770,9 +731,6 @@
         }
     }
 
-    // ============================================================
-    // EGGS
-    // ============================================================
     const gigentEggs = [];
     const eggPositions = [
         { x:80,   y:(worldHeight-20)-EGG_HEIGHT },
@@ -832,7 +790,6 @@
                 egg.y = egg.baseY + Math.sin(egg.bobOffset)*egg.bobAmount;
                 egg.glowSize += egg.glowDirection*egg.glowSpeed;
                 if (egg.glowSize>=egg.maxGlow||egg.glowSize<=0) { egg.glowDirection*=-1; egg.glowSize=Math.max(0,Math.min(egg.maxGlow,egg.glowSize)); }
-                // Magnet attraction
                 if (magnetRadius > 0) {
                     const dx = (player.x+player.width/2)-(egg.x+egg.width/2);
                     const dy = (player.y+player.height/2)-(egg.y+egg.height/2);
@@ -846,9 +803,6 @@
         });
     }
 
-    // ============================================================
-    // BOSSES  (v2 — projectiles, platform patrol, phase changes)
-    // ============================================================
     const bosses = [];
     let bossesKilledThisLevel = 0;
 
@@ -867,7 +821,6 @@
                 patrolDir:1
             });
         } else {
-            // Level 10 — two big bosses
             [200, 740].forEach((bx,i) => {
                 bosses.push({
                     x:bx, y:worldHeight-80, width:60, height:60,
@@ -882,27 +835,35 @@
         }
     }
 
+    function checkBossDeath(boss, index) {
+        if (boss.hp <= 0) {
+            bossDefeatFlash = 25;
+            triggerShake(12, 35);
+            createParticles(boss.x+boss.width/2, boss.y+boss.height/2, 60, 'bossFlash', boss.color);
+            for (let s=0; s<5; s++) createFireworkExplosion(boss.x+boss.width/2 - camera.x, boss.y+boss.height/2 - camera.y);
+            score += 500;
+            bossesKilledThisLevel++;
+            bosses.splice(index, 1);
+            playSound('winGameTune');
+        }
+    }
+
     function updateBosses(deltaTime) {
         for (let i=bosses.length-1; i>=0; i--) {
             let boss = bosses[i];
 
-            // Phase 2 at half HP — faster, shoots more
             if (boss.hp <= boss.maxHp/2 && boss.phase===1) {
                 boss.phase=2;
                 boss.dx *= 1.5;
                 boss.shootInterval = Math.max(30, boss.shootInterval-20);
             }
 
-            // Movement — try to patrol platforms
             boss.x += boss.dx * boss.patrolDir;
 
-            // Gravity for boss
             if (!boss.onGround) { boss.dy += 0.4; boss.y += boss.dy; }
 
-            // Check platform edges / world bounds
             let onAny = false;
             for (const plat of platforms) {
-                // Landing on platform top
                 if (boss.x+boss.width>plat.x && boss.x<plat.x+plat.width &&
                     boss.y+boss.height>=plat.y && boss.y+boss.height<=plat.y+plat.height+boss.dy+5) {
                     boss.y = plat.y - boss.height;
@@ -911,10 +872,8 @@
             }
             boss.onGround = onAny;
 
-            // Reverse at world/platform edges
             if (boss.x<=0 || boss.x+boss.width>=worldWidth) boss.patrolDir*=-1;
 
-            // Reverse if about to walk off a platform edge
             let hasPlatformAhead = false;
             for (const plat of platforms) {
                 const aheadX = boss.patrolDir>0 ? boss.x+boss.width+10 : boss.x-10;
@@ -923,16 +882,13 @@
             }
             if (!hasPlatformAhead && boss.onGround && boss.phase===1) boss.patrolDir*=-1;
 
-            // Occasionally jump to a higher platform in phase 2
             if (boss.phase===2 && boss.onGround && Math.random()<0.002) {
                 boss.dy = -10; boss.onGround=false;
             }
 
-            // Shooting projectiles
             if (boss.shootCooldown > 0) { boss.shootCooldown--; }
             else {
                 boss.shootCooldown = boss.shootInterval;
-                // Shoot towards player
                 const pdx = (player.x+player.width/2) - (boss.x+boss.width/2);
                 const pdy = (player.y+player.height/2) - (boss.y+boss.height/2);
                 const dist = Math.sqrt(pdx*pdx+pdy*pdy);
@@ -947,16 +903,13 @@
                 }
             }
 
-            // Update projectiles
             for (let j=boss.projectiles.length-1; j>=0; j--) {
                 const proj = boss.projectiles[j];
                 proj.x += proj.vx; proj.y += proj.vy;
                 proj.life--;
-                // Remove if off screen or expired
                 if (proj.life<=0||proj.y>worldHeight||proj.x<0||proj.x>worldWidth) {
                     boss.projectiles.splice(j,1); continue;
                 }
-                // Projectile hits player
                 if (!player.invincible &&
                     player.x < proj.x+proj.width && player.x+player.width > proj.x &&
                     player.y < proj.y+proj.height && player.y+player.height > proj.y) {
@@ -968,29 +921,16 @@
                 }
             }
 
-            // Boss vs player collision
             if (player.x < boss.x+boss.width && player.x+player.width > boss.x &&
                 player.y < boss.y+boss.height && player.y+player.height > boss.y) {
 
                 if (player.dy>0 && player.y+player.height < boss.y+boss.height*0.5) {
-                    // Stomp!
                     boss.hp--;
                     player.dy = player.jumpPower*0.8;
                     playSound('bounce');
                     createParticles(boss.x+boss.width/2, boss.y, 20, 'bossHit');
                     triggerShake(6, 18);
-
-                    if (boss.hp<=0) {
-                        // Boss defeat!
-                        bossDefeatFlash = 25;
-                        triggerShake(12, 35);
-                        createParticles(boss.x+boss.width/2, boss.y+boss.height/2, 60, 'bossFlash', boss.color);
-                        for (let s=0; s<5; s++) createFireworkExplosion(boss.x+boss.width/2 - camera.x, boss.y+boss.height/2 - camera.y);
-                        score += 500;
-                        bossesKilledThisLevel++;
-                        bosses.splice(i,1);
-                        playSound('winGameTune');
-                    }
+                    checkBossDeath(boss, i);
                 } else if (!player.invincible) {
                     player.currentHealth -= 25;
                     player.invincible=true; player.invincibleTimer=60;
@@ -1007,7 +947,6 @@
             if (boss.x+boss.width < camera.x || boss.x > camera.x+viewportWidth) return;
             const bx = boss.x-camera.x, by = boss.y-camera.y;
 
-            // Phase 2 pulsing glow
             if (boss.phase===2) {
                 const glow = 10 + Math.sin(Date.now()*0.01)*5;
                 ctx.shadowColor = '#FF0000';
@@ -1017,31 +956,26 @@
             ctx.fillStyle = boss.color;
             ctx.fillRect(bx, by, boss.width, boss.height);
 
-            // Eyes
             ctx.fillStyle = 'white';
             ctx.fillRect(bx+6, by+8, 8, 8);
             ctx.fillRect(bx+boss.width-14, by+8, 8, 8);
             ctx.fillStyle = 'black';
             ctx.fillRect(bx+8, by+10, 4, 4);
             ctx.fillRect(bx+boss.width-12, by+10, 4, 4);
-
             ctx.shadowBlur = 0;
 
-            // HP bar
             ctx.fillStyle = '#333';
             ctx.fillRect(bx, by-12, boss.width, 7);
             const hpPct = boss.hp/boss.maxHp;
             ctx.fillStyle = hpPct>0.5 ? '#00cc00' : hpPct>0.25 ? '#ffaa00' : '#ff0000';
             ctx.fillRect(bx, by-12, boss.width*hpPct, 7);
 
-            // Phase badge
             if (boss.phase===2) {
                 ctx.font='bold 10px Segoe UI'; ctx.fillStyle='#FF0000'; ctx.textAlign='center';
                 ctx.fillText('PHASE 2', bx+boss.width/2, by-15);
                 ctx.textAlign='left';
             }
 
-            // Draw projectiles
             boss.projectiles.forEach(proj => {
                 if (proj.x+proj.width<camera.x||proj.x>camera.x+viewportWidth) return;
                 ctx.fillStyle = proj.color;
@@ -1055,36 +989,32 @@
         });
     }
 
-    // ============================================================
-    // FIREWORKS
-    // ============================================================
     let showFireworksAnimation = false;
     let fireworksInterval;
     function createFireworkExplosion(x, y) {
         createParticles(x, y, 60+Math.random()*40, 'firework_spark');
     }
 
-    // ============================================================
-    // INPUT
-    // ============================================================
-    const keys = { w:false,a:false,s:false,d:false,p:false,r:false,Shift:false,ArrowUp:false,ArrowLeft:false,ArrowDown:false,ArrowRight:false };
-    let jumpPressed = false; // edge detection for double jump
+    const keys = { w:false,a:false,s:false,d:false,p:false,r:false,Shift:false,Space:false,ArrowUp:false,ArrowLeft:false,ArrowDown:false,ArrowRight:false };
+    let jumpPressed = false; 
 
     window.addEventListener('keydown', e => {
         if (e.key==='Shift')      keys.Shift=true;
+        if (e.code==='Space')     { e.preventDefault(); keys.Space=true; }
         if (e.key==='w'||e.key==='W') { if(!keys.w) jumpPressed=true; keys.w=true; }
         if (e.key==='a'||e.key==='A') keys.a=true;
         if (e.key==='s'||e.key==='S') keys.s=true;
         if (e.key==='d'||e.key==='D') keys.d=true;
         if (e.key==='p'||e.key==='P') { if(!keys.p&&!showStartMenu) togglePause(); keys.p=true; }
         if (e.key==='r'||e.key==='R') { if(!gameActive&&!gameWon&&!showStartMenu){score=scoreAtStartOfLevel;loadLevel(currentLevel);} keys.r=true; }
-        if (e.key==='ArrowUp')    { if(!keys.ArrowUp) jumpPressed=true; keys.ArrowUp=true; }
-        if (e.key==='ArrowLeft')  keys.ArrowLeft=true;
-        if (e.key==='ArrowDown')  keys.ArrowDown=true;
-        if (e.key==='ArrowRight') keys.ArrowRight=true;
+        if (e.key==='ArrowUp')    { if(!keys.ArrowUp) jumpPressed=true; keys.ArrowUp=true; e.preventDefault(); }
+        if (e.key==='ArrowLeft')  { keys.ArrowLeft=true; e.preventDefault(); }
+        if (e.key==='ArrowDown')  { keys.ArrowDown=true; e.preventDefault(); }
+        if (e.key==='ArrowRight') { keys.ArrowRight=true; e.preventDefault(); }
     });
     window.addEventListener('keyup', e => {
         if (e.key==='Shift')      keys.Shift=false;
+        if (e.code==='Space')     keys.Space=false;
         if (e.key==='w'||e.key==='W') keys.w=false;
         if (e.key==='a'||e.key==='A') keys.a=false;
         if (e.key==='s'||e.key==='S') keys.s=false;
@@ -1097,13 +1027,15 @@
         if (e.key==='ArrowRight') keys.ArrowRight=false;
     });
 
-    // --- REBUILT TOUCH CONTROLS ---
+    // ROBUST MOBILE TOUCH CONTROL
     function setupTouchControl(btnId, keyProp1, keyProp2, isJumpBtn) {
         const btn = document.getElementById(btnId);
         if (!btn) return;
 
+        btn.style.touchAction = 'none'; // Prevents browser stealing first tap on Android
+
         const press = e => {
-            if (e.cancelable) e.preventDefault(); // Prevents zooming/swiping
+            if (e.cancelable) e.preventDefault();
             if (keyProp1) keys[keyProp1] = true;
             if (keyProp2) keys[keyProp2] = true;
             if (isJumpBtn) jumpPressed = true;
@@ -1118,15 +1050,12 @@
             btn.style.background = '';
         };
 
-        // Use strict target-locked touch events
-        btn.addEventListener('touchstart', press, {passive: false});
-        btn.addEventListener('touchend', release, {passive: false});
-        btn.addEventListener('touchcancel', release, {passive: false});
+        // Pointer Events — one unified handler for touch, mouse & stylus
+        btn.addEventListener('pointerdown',   press);
+        btn.addEventListener('pointerup',     release);
+        btn.addEventListener('pointercancel', release);
+        btn.addEventListener('pointerout',    release); // handles finger sliding off button
 
-        // Mouse fallbacks
-        btn.addEventListener('mousedown', press);
-        btn.addEventListener('mouseup', release);
-        btn.addEventListener('mouseleave', release);
         btn.addEventListener('contextmenu', e => e.preventDefault());
     }
 
@@ -1138,43 +1067,44 @@
         } else { if (document.exitFullscreen) document.exitFullscreen(); }
     });
 
-    document.addEventListener('DOMContentLoaded', () => {
-        setupTouchControl('btnLeft', 'a', 'ArrowLeft', false);
-        setupTouchControl('btnRight', 'd', 'ArrowRight', false);
-        setupTouchControl('btnJump', 'w', 'ArrowUp', true);
-        setupTouchControl('btnCrouch', 's', 'ArrowDown', false);
-        setupTouchControl('btnDash', 'Shift', null, false);
+    // Script is at bottom of <body> so DOM is already ready when this runs.
+    // DOMContentLoaded was unreliable here — the event could fire before the
+    // listener was registered, silently preventing the game loop from ever starting.
+    function initControls() {
+        setupTouchControl('btnLeft',   'a',     'ArrowLeft',  false);
+        setupTouchControl('btnRight',  'd',     'ArrowRight', false);
+        setupTouchControl('btnJump',   'w',     'ArrowUp',    true);
+        setupTouchControl('btnCrouch', 's',     'ArrowDown',  false);
+        setupTouchControl('btnDash',   'Shift', null,         false);
+        setupTouchControl('btnAttack', 'Space', null,         false);
 
-        // Mobile pause button
         const pauseBtn = document.getElementById('btnMobilePause');
         if (pauseBtn) {
-            const toggleP = e => {
+            pauseBtn.style.touchAction = 'none';
+            pauseBtn.addEventListener('pointerdown', e => {
                 if (e.cancelable) e.preventDefault();
-                if (!showStartMenu) togglePause();
-            };
-            pauseBtn.addEventListener('touchstart', toggleP, {passive: false});
-            pauseBtn.addEventListener('mousedown', toggleP);
+                if (!showStartMenu) {
+                    togglePause();
+                    pauseBtn.textContent = gamePaused ? '\u25B6' : '\u23F8';
+                }
+            });
             pauseBtn.addEventListener('contextmenu', e => e.preventDefault());
         }
 
-        // Mobile mute button
         const muteBtn = document.getElementById('btnMobileMute');
         if (muteBtn) {
-            const toggleM = e => {
+            muteBtn.style.touchAction = 'none';
+            muteBtn.addEventListener('pointerdown', e => {
                 if (e.cancelable) e.preventDefault();
                 toggleMute();
-            };
-            muteBtn.addEventListener('touchstart', toggleM, {passive: false});
-            muteBtn.addEventListener('mousedown', toggleM);
+            });
             muteBtn.addEventListener('contextmenu', e => e.preventDefault());
         }
 
         executeAfterImagesLoad(() => { showStartMenu=true; renderLeaderboard('startLeaderboard'); requestAnimationFrame(gameLoop); });
-    });
+    }
+    initControls();
 
-    // ============================================================
-    // MENU BUTTONS
-    // ============================================================
     document.getElementById('startButton').addEventListener('click', () => {
         document.getElementById('startMenu').classList.remove('active');
         showStartMenu=false; score=0; scoreAtStartOfLevel=0; activePets=[]; activePetsAtStartOfLevel=[]; levelStars=[];
@@ -1197,9 +1127,6 @@
         loadLevel(1);
     });
 
-    // ============================================================
-    // PAUSE
-    // ============================================================
     function togglePause() {
         if (showStartMenu) return;
         gamePaused=!gamePaused;
@@ -1211,21 +1138,6 @@
         else { if(gameActive&&lastPauseTime) timePausedStartTotal+=(performance.now()-lastPauseTime); lastUpdateTime=performance.now(); lastPauseTime=0; playSound('resume'); }
     }
 
-    // ============================================================
-    // SOUND
-    // ============================================================
-    function playSound(name) {
-        if (isMuted) return;
-        try {
-            const a = new Audio('sounds/'+name+'.mp3');
-            const p = a.play();
-            if (p) p.catch(e=>{ if(e.name!=='NotAllowedError'&&e.name!=='AbortError') console.error(e); });
-        } catch(e) {}
-    }
-
-    // ============================================================
-    // LEVEL COMPLETE / WIN SCREENS
-    // ============================================================
     function showLevelCompleteScreen(stars, bonus) {
         const menu = document.getElementById('levelCompleteMenu');
         document.getElementById('lcTitle').textContent = currentLevel < MAX_LEVELS ? `Level ${currentLevel} Complete!` : 'Boss Beaten!';
@@ -1246,9 +1158,6 @@
         document.getElementById('gameWonMenu').classList.add('active');
     }
 
-    // ============================================================
-    // HELPERS
-    // ============================================================
     function canStandUp() {
         const oy=player.y, oh=player.height;
         player.y-=(player.normalHeight-player.crouchHeight); player.height=player.normalHeight;
@@ -1259,9 +1168,6 @@
         player.y=oy; player.height=oh; return clear;
     }
 
-    // ============================================================
-    // UPDATE
-    // ============================================================
     function update() {
         if (showStartMenu||gamePaused||(!gameActive&&player.currentHealth>0&&timeLeft>0&&!gameWon)) return;
         if (!gameActive) return;
@@ -1274,25 +1180,87 @@
         const elapsed = (NOW-gameStartTime-timePausedStartTotal)/1000;
         timeLeft = Math.max(0, baseTimeForLevel-Math.floor(elapsed));
 
-        // Screen shake tick
         if (screenShake.duration>0) {
             screenShake.duration--;
             if (screenShake.duration===0) screenShake.intensity=0;
         }
         if (bossDefeatFlash>0) bossDefeatFlash--;
 
-        // Power-up timers
         Object.keys(player.powerups).forEach(k => {
             if (player.powerups[k]>0) {
                 player.powerups[k]--;
                 if (player.powerups[k]===0) renderPowerupBar();
             }
         });
-        if (Math.floor(NOW/1000) !== Math.floor((NOW-16)/1000)) renderPowerupBar(); // update every second approx
+        if (Math.floor(NOW/1000) !== Math.floor((NOW-16)/1000)) renderPowerupBar(); 
 
         const effectiveSpeed = player.powerups.speed>0 ? player.speed*1.7 : player.speed;
 
-        // --- DASH ---
+        // WEAPONS LOGIC
+        if (score >= 2300) currentWeapon = 'Katana';
+        else if (score >= 1500) currentWeapon = 'Mini Gun';
+        else currentWeapon = 'None';
+        
+        const wDisp = document.getElementById('weaponDisplay');
+        if (wDisp) wDisp.textContent = currentWeapon;
+
+        if (player.attackCooldown > 0) player.attackCooldown--;
+        if (player.katanaActive > 0) player.katanaActive--;
+
+        for (let i = player.projectiles.length - 1; i >= 0; i--) {
+            let p = player.projectiles[i];
+            p.x += p.vx;
+            p.life--;
+            if (p.life <= 0 || p.x < 0 || p.x > worldWidth) {
+                player.projectiles.splice(i, 1);
+                continue;
+            }
+            
+            for (let j = bosses.length - 1; j >= 0; j--) {
+                let b = bosses[j];
+                if (p.x < b.x + b.width && p.x + p.width > b.x &&
+                    p.y < b.y + b.height && p.y + p.height > b.y) {
+                    b.hp--;
+                    createParticles(p.x, p.y, 10, 'bossHit');
+                    player.projectiles.splice(i, 1);
+                    checkBossDeath(b, j);
+                    break;
+                }
+            }
+        }
+
+        if (keys.Space && player.attackCooldown <= 0 && currentWeapon !== 'None') {
+            if (currentWeapon === 'Mini Gun') {
+                player.attackCooldown = 8; 
+                player.projectiles.push({
+                    x: player.facing === 'right' ? player.x + player.width : player.x - 12,
+                    y: player.y + player.height / 2 - 2,
+                    vx: player.facing === 'right' ? 12 : -12,
+                    width: 12, height: 4, life: 60, color: '#FFFF00'
+                });
+                playSound('jump'); 
+            } else if (currentWeapon === 'Katana') {
+                player.attackCooldown = 25;
+                player.katanaActive = 10;
+                playSound('dash'); 
+                
+                let hx = player.facing === 'right' ? player.x + player.width : player.x - 45;
+                let hy = player.y - 10;
+                let hw = 45;
+                let hh = player.height + 20;
+                
+                for (let j = bosses.length - 1; j >= 0; j--) {
+                    let b = bosses[j];
+                    if (hx < b.x + b.width && hx + hw > b.x &&
+                        hy < b.y + b.height && hy + hh > b.y) {
+                        b.hp -= 2; 
+                        createParticles(b.x + b.width/2, b.y + b.height/2, 15, 'bossHit');
+                        checkBossDeath(b, j);
+                    }
+                }
+            }
+        }
+
         if (player.dashCooldownTimer>0) player.dashCooldownTimer--;
         if (keys.Shift&&!player.isDashing&&player.dashCooldownTimer<=0&&player.onGround) {
             player.isDashing=true; player.dashTimer=player.dashDuration;
@@ -1311,11 +1279,9 @@
             if (keys.d||keys.ArrowRight) { player.dx=effectiveSpeed;  player.facing='right'; }
         }
 
-        // Invincibility
         if (player.powerups.invincible>0) { player.invincible=true; player.invincibleTimer=Math.max(player.invincibleTimer,2); }
         if (player.invincible) { player.invincibleTimer--; if(player.invincibleTimer<=0&&player.powerups.invincible<=0) player.invincible=false; }
 
-        // --- CROUCH ---
         const tryingToCrouch = keys.s||keys.ArrowDown;
         if (tryingToCrouch&&!player.isJumping&&player.onGround&&!player.isDashing) {
             if (!player.isCrouching) { player.isCrouching=true; player.y+=(player.normalHeight-player.crouchHeight); player.height=player.crouchHeight; playSound('crouch'); }
@@ -1323,17 +1289,14 @@
             if (player.isCrouching&&canStandUp()) { player.isCrouching=false; player.y-=(player.normalHeight-player.crouchHeight); player.height=player.normalHeight; playSound('stand'); }
         }
 
-        // --- DOUBLE JUMP ---
         const wantJump = jumpPressed;
-        jumpPressed = false; // consume edge event
+        jumpPressed = false; 
         if (wantJump && !player.isDashing) {
             if (player.onGround) {
-                // First jump
                 player.dy=player.jumpPower; player.isJumping=true; player.onGround=false; player.jumpsUsed=1;
                 playSound('jump');
                 createParticles(player.x+player.width/2, player.y+player.height, 5, 'jump');
             } else if (player.jumpsUsed < player.maxJumps) {
-                // Double jump!
                 player.dy=player.jumpPower*0.85; player.jumpsUsed++;
                 playSound('jump');
                 createParticles(player.x+player.width/2, player.y+player.height/2, 8, 'jump');
@@ -1376,15 +1339,12 @@
         if (player.y<0) { player.y=0; player.dy=0; }
         if (player.y>worldHeight+player.height*2) player.currentHealth=0;
 
-        // Camera
         let targetCameraX = player.x-viewportWidth/2+player.width/2;
         camera.x = Math.max(0, Math.min(targetCameraX, worldWidth-viewportWidth));
 
-        // Player history for pets
         player.history.unshift({ y: player.y });
         if (player.history.length>300) player.history.pop();
 
-        // --- PETS ---
         for (let i=uncollectedPets.length-1; i>=0; i--) {
             let pet=uncollectedPets[i];
             pet.bobOffset+=0.05; pet.y=pet.baseY+Math.sin(pet.bobOffset)*5;
@@ -1405,19 +1365,16 @@
         });
         score+=passivePts;
 
-        // --- POWER-UP ITEMS ---
         for (let i=activePowerupItems.length-1; i>=0; i--) {
             const pu=activePowerupItems[i];
             if (pu.collected) continue;
-            pu.bobOffset+=0.06; // bob
+            pu.bobOffset+=0.06; 
             const drawY = pu.y + Math.sin(pu.bobOffset)*4;
-            // Collision
             if (player.x<pu.x+pu.width&&player.x+player.width>pu.x&&player.y<drawY+pu.height&&player.y+player.height>drawY) {
                 pu.collected=true; applyPowerup(pu.type);
             }
         }
 
-        // --- EGGS ---
         const magnetBonus = player.powerups.magnet>0 ? 30 : 0;
         gigentEggs.forEach(egg => {
             if (!egg.collected) {
@@ -1431,10 +1388,8 @@
             }
         });
 
-        // --- BOSSES ---
         updateBosses(deltaTime);
 
-        // --- GOAL FLAG ---
         if (goalFlag && !goalFlag.reached) {
             if (player.x<goalFlag.x+goalFlag.width&&player.x+player.width>goalFlag.x&&
                 player.y<goalFlag.y+goalFlag.height&&player.y+player.height>goalFlag.y) {
@@ -1449,12 +1404,10 @@
         updateParticles();
         updateHatchAnimations();
 
-        // --- DEATH / TIME UP ---
         if (player.currentHealth<=0||timeLeft<=0) {
             gameActive=false; playSound('gameOverTune'); gameWon=false;
         }
 
-        // --- LEVEL 10 boss-clear win ---
         if (currentLevel===MAX_LEVELS && bosses.length===0 && gameActive) {
             triggerLevelComplete();
         }
@@ -1491,9 +1444,6 @@
         }
     }
 
-    // ============================================================
-    // CLOUDS
-    // ============================================================
     function updateClouds() {
         clouds.forEach(cloud => {
             cloud.x+=cloud.speed;
@@ -1503,9 +1453,6 @@
         });
     }
 
-    // ============================================================
-    // DRAW
-    // ============================================================
     function drawPlayer() {
         const drawY=player.y-camera.y;
         let img;
@@ -1513,15 +1460,13 @@
         else img=player.facing==='right'?images['player_stand_right']:images['player_stand_left'];
         ctx.globalAlpha=1;
         if (player.invincible&&Math.floor(Date.now()/80)%2===0) ctx.globalAlpha=0.5;
-        // Speed boost aura
+
         if (player.powerups.speed>0) { ctx.shadowColor='#FFFF00'; ctx.shadowBlur=12; }
-        // Star aura
         if (player.powerups.invincible>0) { ctx.shadowColor='#FF69B4'; ctx.shadowBlur=15; }
-        if (img&&img.complete&&img.width>0) ctx.drawImage(img, player.x-camera.x, drawY, player.width, player.height);
+        if (img&&img.complete&&img.naturalWidth>0) ctx.drawImage(img, player.x-camera.x, drawY, player.width, player.height);
         else { ctx.fillStyle='blue'; ctx.fillRect(player.x-camera.x, drawY, player.width, player.height); }
         ctx.globalAlpha=1; ctx.shadowBlur=0;
 
-        // Double jump indicator — small orb above player when airborne & has second jump
         if (!player.onGround && player.jumpsUsed < player.maxJumps) {
             ctx.fillStyle='rgba(135,206,235,0.8)';
             ctx.beginPath();
@@ -1536,13 +1481,11 @@
             if (p.type==='bounce')  ctx.fillStyle='#76FF03';
             else if (p.type==='crouch') ctx.fillStyle='#A1887F';
             else if (p.moving) {
-                // Moving platforms get a glowing edge
                 ctx.fillStyle=p.color;
                 ctx.shadowColor=p.color; ctx.shadowBlur=8;
             } else ctx.fillStyle=p.color;
             ctx.fillRect(p.x-camera.x, p.y-camera.y, p.width, p.height);
             ctx.shadowBlur=0;
-            // Moving platform arrow indicator
             if (p.moving && p.type!=='bounce') {
                 ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.font='10px Arial'; ctx.textAlign='center';
                 ctx.fillText('↔', p.x-camera.x+p.width/2, p.y-camera.y+14);
@@ -1557,7 +1500,7 @@
             const ih=(img?.height||(dec.type==='plant1'?30:50));
             const iw=(img?.width||(dec.type==='plant1'?25:35));
             if (dec.x+iw>camera.x&&dec.x<camera.x+viewportWidth) {
-                if (img&&img.complete&&img.width>0) ctx.drawImage(img, dec.x-camera.x, dec.y-camera.y, iw, ih);
+                if (img&&img.complete&&img.naturalWidth>0) ctx.drawImage(img, dec.x-camera.x, dec.y-camera.y, iw, ih);
             }
         });
     }
@@ -1571,7 +1514,7 @@
             const bh=cloud.type==='cloud1'?(images.cloud1?.height||50):(images.cloud2?.height||35);
             const iw=bw*cloud.scale, ih=bh*cloud.scale;
             if (cx+iw>0&&cx<viewportWidth) {
-                if (img&&img.complete&&img.width>0) {
+                if (img&&img.complete&&img.naturalWidth>0) {
                     ctx.globalAlpha=cloud.opacity;
                     ctx.drawImage(img, cx, cloud.y-camera.y, iw, ih);
                     ctx.globalAlpha=1;
@@ -1590,7 +1533,7 @@
                     ctx.globalAlpha=1;
                 }
                 const eggImg=images[egg.type];
-                if (eggImg&&eggImg.complete&&eggImg.width>0) ctx.drawImage(eggImg, egg.x-camera.x, egg.y-camera.y, egg.width, egg.height);
+                if (eggImg&&eggImg.complete&&eggImg.naturalWidth>0) ctx.drawImage(eggImg, egg.x-camera.x, egg.y-camera.y, egg.width, egg.height);
                 else { ctx.fillStyle=egg.color; ctx.beginPath(); ctx.ellipse(ecx,ecy,egg.width/2,egg.height/2,0,0,Math.PI*2); ctx.fill(); }
             }
         });
@@ -1602,13 +1545,12 @@
             const dy=pu.y+Math.sin(pu.bobOffset)*4;
             if (pu.x+pu.width<camera.x||pu.x>camera.x+viewportWidth) return;
             const px=pu.x-camera.x, py=dy-camera.y;
-            // Glow
             ctx.shadowColor=pu.color; ctx.shadowBlur=10;
             ctx.fillStyle=pu.color;
             ctx.beginPath(); ctx.arc(px+pu.width/2, py+pu.height/2, pu.width/2, 0, Math.PI*2); ctx.fill();
             ctx.shadowBlur=0;
-            // Icon
             ctx.font=`${pu.width-6}px serif`; ctx.textAlign='center';
+            ctx.fillStyle='white'; 
             ctx.fillText(pu.label.split(' ')[0], px+pu.width/2, py+pu.height-3);
             ctx.textAlign='left';
         });
@@ -1618,13 +1560,13 @@
         uncollectedPets.forEach(pet => {
             if (pet.x+pet.width<camera.x||pet.x>camera.x+viewportWidth) return;
             const img=images[pet.type];
-            if (img&&img.complete&&img.width>0) ctx.drawImage(img, pet.x-camera.x, pet.y-camera.y, pet.width, pet.height);
+            if (img&&img.complete&&img.naturalWidth>0) ctx.drawImage(img, pet.x-camera.x, pet.y-camera.y, pet.width, pet.height);
             else { ctx.fillStyle='white'; ctx.fillRect(pet.x-camera.x, pet.y-camera.y, pet.width, pet.height); }
         });
         activePets.forEach((pet,idx) => {
             if (pet.x+pet.width<camera.x||pet.x>camera.x+viewportWidth) return;
             const img=images[pet.type];
-            if (img&&img.complete&&img.width>0) {
+            if (img&&img.complete&&img.naturalWidth>0) {
                 ctx.save();
                 if (player.facing==='left') {
                     ctx.translate((pet.x-camera.x)+pet.width/2, (pet.y-camera.y)+pet.height/2);
@@ -1643,13 +1585,11 @@
         const hp=Math.max(0,(player.currentHealth/player.maxHealth)*100);
         document.getElementById('healthBar').style.width   = hp+'%';
 
-        // Time warning flash
         if (timeLeft<=10&&timeLeft>0&&Math.floor(Date.now()/500)%2===0) {
             ctx.fillStyle='rgba(255,0,0,0.1)';
             ctx.fillRect(0,0,viewportWidth,viewportHeight);
         }
 
-        // Boss defeat flash
         if (bossDefeatFlash>0) {
             ctx.fillStyle=`rgba(255,220,0,${(bossDefeatFlash/25)*0.45})`;
             ctx.fillRect(0,0,viewportWidth,viewportHeight);
@@ -1676,7 +1616,6 @@
 
     function draw() {
         ctx.save();
-        // Screen shake
         if (screenShake.duration>0) {
             const sx=(Math.random()-0.5)*screenShake.intensity;
             const sy=(Math.random()-0.5)*screenShake.intensity;
@@ -1693,24 +1632,52 @@
         drawEggs();
         drawBosses();
         drawHatchAnimations();
+        
+        player.projectiles.forEach(p => {
+            if (p.x + p.width > camera.x && p.x < camera.x + viewportWidth) {
+                ctx.fillStyle = p.color;
+                ctx.shadowColor = p.color;
+                ctx.shadowBlur = 8;
+                ctx.fillRect(p.x - camera.x, p.y - camera.y, p.width, p.height);
+                ctx.shadowBlur = 0;
+            }
+        });
+
         drawPlayer();
+        
+        if (player.katanaActive > 0) {
+            const px = player.x - camera.x + player.width/2;
+            const py = player.y - camera.y + player.height/2;
+            const radius = 40;
+            const startAng = player.facing === 'right' ? -Math.PI/2 : Math.PI*1.5;
+            const prog = 1 - (player.katanaActive / 10); 
+            
+            ctx.save();
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.shadowColor = '#00BFFF';
+            ctx.shadowBlur = 10;
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            if (player.facing === 'right') {
+                ctx.arc(px, py, radius, startAng, startAng + (Math.PI) * prog);
+            } else {
+                ctx.arc(px, py, radius, startAng, startAng - (Math.PI) * prog, true);
+            }
+            ctx.stroke();
+            ctx.restore();
+        }
+
         drawParticles();
         ctx.restore();
-        drawUI(); // UI on top of shake
+        drawUI(); 
     }
 
-    // ============================================================
-    // GAME LOOP
-    // ============================================================
     function gameLoop(timestamp) {
         if (showStartMenu) { draw(); }
         else { update(); draw(); }
         requestAnimationFrame(gameLoop);
     }
 
-    // ============================================================
-    // LOAD LEVEL
-    // ============================================================
     function loadLevel(level) {
         currentLevel=level;
         eggsCollected=0; gameWon=false; levelScoreGained=0;
@@ -1737,6 +1704,7 @@
         player.isJumping=false; player.onGround=true; player.jumpsUsed=0;
         player.invincible=false; player.invincibleTimer=0;
         player.isDashing=false; player.dashTimer=0; player.dashCooldownTimer=0;
+        player.attackCooldown = 0; player.katanaActive = 0; player.projectiles = [];
         player.currentHealth=player.maxHealth;
         player.history=[];
         player.powerups={ speed:0, invincible:0, magnet:0 };
@@ -1753,10 +1721,8 @@
         gameStartTime=performance.now();
         lastUpdateTime=performance.now();
 
-        // Music — boss level gets boss music, others get level music
         if (currentLevel===MAX_LEVELS) playBgMusic('music_boss', 'ogg');
         else if (currentLevel===1) playBgMusic('music_levels', 'mp3');
-        // (continues across levels without restart)
 
         document.getElementById('timeCount').textContent=timeLeft;
         document.getElementById('pauseMenu').classList.remove('active');
